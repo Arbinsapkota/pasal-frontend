@@ -36,6 +36,7 @@ import { useModal } from "../providers/ModalStateProvider";
 import { Button, buttonVariants } from "../ui/button";
 import { MdOutlineStar } from "react-icons/md";
 import { BsDash } from "react-icons/bs";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
 
 const Categories = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -51,22 +52,22 @@ const Categories = () => {
     // Fetch categories
     axios
       .get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`)
-      .then(response => {
+      .then((response) => {
         const twoCategory = response.data;
         setCategories(twoCategory);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("Error fetching categories:", error);
       });
 
     // Fetch products
     axios
       .get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/`)
-      .then(response => {
+      .then((response) => {
         setProducts(response.data);
         setIsLoading(false);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("Error fetching products:", error);
         setIsLoading(false);
       });
@@ -78,10 +79,10 @@ const Categories = () => {
     if (user) {
       axiosAuthInstance()
         .get("/api/cart/")
-        .then(res => {
+        .then((res) => {
           setCartData(res.data);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error fetching Cart Items", err);
         });
     }
@@ -96,7 +97,7 @@ const Categories = () => {
   const countApi = useCallback(
     useDebouncedCallback((product: any, quantity: number) => {
       const existingItem = cartData.find(
-        item => item.productId === product.productId
+        (item) => item.productId === product.productId
       );
 
       if (existingItem && existingItem.itemId) {
@@ -110,7 +111,7 @@ const Categories = () => {
             //   fetchCartData(); // Refresh cart after update
             // }
           })
-          .catch(err => {
+          .catch((err) => {
             toast.error("Failed to update cart");
             console.error(err);
           });
@@ -129,7 +130,7 @@ const Categories = () => {
       .then(() => {
         fetchCartData(); // Refresh cart after adding
       })
-      .catch(err => {
+      .catch((err) => {
         toast.error("Failed to add to cart");
         console.error(err);
       });
@@ -138,7 +139,7 @@ const Categories = () => {
   const addtoCartByown = (product: Product) => {
     // Check if the product already exists in allItems
     const existingItem = allItems.find(
-      item => item.productId === product.productId
+      (item) => item.productId === product.productId
     );
 
     const itemPrice = product.price;
@@ -146,7 +147,7 @@ const Categories = () => {
     let updatedItems;
     if (existingItem) {
       // If the product exists, increase quantity and update the total price
-      updatedItems = allItems.map(item =>
+      updatedItems = allItems.map((item) =>
         item.productId === product.productId
           ? {
               ...item,
@@ -187,7 +188,7 @@ const Categories = () => {
   const increaseCount = (product: Product) => {
     // Check if the product already exists in allItems
     const existingItem = allItems.find(
-      item => item.productId === product.productId
+      (item) => item.productId === product.productId
     );
 
     const itemPrice = product.price;
@@ -195,7 +196,7 @@ const Categories = () => {
     let updatedItems;
     if (existingItem) {
       // If the product exists, increase quantity and update the total price
-      updatedItems = allItems.map(item =>
+      updatedItems = allItems.map((item) =>
         item.productId === product.productId
           ? {
               ...item,
@@ -239,13 +240,13 @@ const Categories = () => {
       if (action === "add") {
         axiosAuthInstance()
           .post(endpoint, { product: { productId: product.productId } })
-          .catch(err => {
+          .catch((err) => {
             toast.error(`Error adding in favorite.`);
           });
       } else {
         axiosAuthInstance()
           .delete(endpoint, { params: { productId: product.productId } })
-          .catch(err => {
+          .catch((err) => {
             console.log(err);
           });
       }
@@ -270,25 +271,25 @@ const Categories = () => {
   };
 
   const decreaseCount = (productId: string) => {
-    const existingItem = allItems.find(item => item.productId === productId);
+    const existingItem = allItems.find((item) => item.productId === productId);
 
     if (existingItem) {
       if (existingItem.quantities === 1) {
         // Remove the item completely if quantity is 1
-        setAllItems(allItems.filter(item => item.productId !== productId));
+        setAllItems(allItems.filter((item) => item.productId !== productId));
         dispatch(removeFromCart(productId));
 
         // Call API to completely remove item
         if (user) {
           axiosAuthInstance()
             .delete(`/api/cart/remove?productId=${existingItem.productId}`)
-            .catch(err => {
+            .catch((err) => {
               // toast.error("Failed to Remove Item from Cart");
             });
         }
       } else {
         // Decrease quantity and update total price
-        const updatedItems = allItems.map(item =>
+        const updatedItems = allItems.map((item) =>
           item.productId === productId
             ? {
                 ...item,
@@ -357,9 +358,9 @@ const Categories = () => {
       ) : (
         categories
           .filter(
-            category =>
+            (category) =>
               products.filter(
-                product => product.category === category.categoryId
+                (product) => product.category === category.categoryId
               ).length >= 5
           )
           .map((category, index) => (
@@ -388,13 +389,13 @@ const Categories = () => {
                 <Carousel>
                   <CarouselContent className="sm:pl-6 pl-3 pb-2">
                     {products
-                      .filter(p => p.category === category.categoryId)
+                      .filter((p) => p.category === category.categoryId)
                       .map((filteredProduct, index) => {
                         const item = items.find(
-                          item => item.productId === filteredProduct.productId
+                          (item) => item.productId === filteredProduct.productId
                         );
                         const isAddedInWishlist = wishlistItems.find(
-                          item => item.productId == filteredProduct.productId
+                          (item) => item.productId == filteredProduct.productId
                         );
 
                         return (
@@ -411,7 +412,8 @@ const Categories = () => {
                                     {((filteredProduct.discountedPrice > 0 &&
                                       filteredProduct.price >
                                         filteredProduct.discountedPrice) ||
-                                      filteredProduct.discountPercentage > 0) && (
+                                      filteredProduct.discountPercentage >
+                                        0) && (
                                       <div className="absolute sm:-top-1 top-1 -left-1 sm:-left-3 z-10">
                                         <h1 className="text-xs px-2 py-1 bg-red-500 text-white font-semibold rounded-r-full text-start">
                                           {filteredProduct.discountPercentage
@@ -426,7 +428,7 @@ const Categories = () => {
                                     <div className="relative w-full aspect-square sm:h-[170px] h-auto">
                                       <Image
                                         src={
-                                          filteredProduct?.imageUrls?.[0] ||
+                                          `${NEXT_PUBLIC_CLOUDINARY_URL}${filteredProduct?.imageUrls?.[0]}` ||
                                           "/product.png"
                                         }
                                         alt={
@@ -441,7 +443,7 @@ const Categories = () => {
                                     <div className="absolute top-1 right-1 sm:-top-1 sm:-right-1 z-10">
                                       {user ? (
                                         <Button
-                                          onClick={e => {
+                                          onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             toggleWishlist(
@@ -462,7 +464,7 @@ const Categories = () => {
                                         </Button>
                                       ) : (
                                         <Button
-                                          onClick={e => {
+                                          onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             setIsLoginModalOpen(true);
@@ -541,7 +543,7 @@ const Categories = () => {
                                       <div className="flex  rounded-full">
                                         <Button
                                           className="p-1 text-xs sm:text-sm border-r  rounded-lg rounded-r-none pl-2 sm:pl-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                          onClick={e => {
+                                          onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             decreaseCount(
@@ -563,7 +565,7 @@ const Categories = () => {
                                         </span>
                                         <Button
                                           className="p-1 text-xs sm:text-sm  rounded-lg rounded-l-none border-l pr-2 sm:pr-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                          onClick={e => {
+                                          onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             increaseCount(filteredProduct);
@@ -580,7 +582,7 @@ const Categories = () => {
                                       user ? (
                                         <Button
                                           variant={"default"}
-                                          onClick={e => {
+                                          onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             addtoCartByown(filteredProduct);
@@ -592,7 +594,7 @@ const Categories = () => {
                                       ) : (
                                         <Button
                                           variant={"default"}
-                                          onClick={e => {
+                                          onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
                                             setIsLoginModalOpen(true);
