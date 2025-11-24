@@ -100,7 +100,6 @@ const ProductUpload: React.FC = () => {
   const [isAdded, setIsAdded] = useState<boolean>(true);
   // const [labelImage, setLabelImage] = useState<>();
 
-  const [superCategories, setSuperCategories] = useState<SupperCategory[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<Subcategory[]>([]);
@@ -113,37 +112,31 @@ const ProductUpload: React.FC = () => {
   const [description, setDescription] = useState<string>("");
 
   useEffect(() => {
-    axios
-      .get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/superCategory/`)
-      .then(response => {
-        setSuperCategories(response.data);
-      })
-      .catch(error => {
-        console.error("Error fetching super categories:", error);
-        // setIsLoading(false);
-      });
-
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`
-        );
-        setCategories(response.data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
-    axiosInstance()
-      .get("/api/subcategory/")
-      .then(res => {
-        setAllSubCategories(res.data);
-      })
-      .catch(err => console.error("Err", err));
-
     fetchCategories();
   }, []);
 
-  const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
+  const fetchCategories = async () => {
+   await axios.get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`
+        ).then((response) => {
+          setCategories(response.data as Category[]);
+        }).catch((error) => {
+          console.error("Error fetching categories:", error);
+        });
+    };
+
+
+
+  const fetchSubCategories = async (id: string) => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/subcategory/by-category?category=${id}`
+      );
+      setAllSubCategories(response.data);
+    } catch (error) {
+      console.error("Error fetching subcategories:", error);
+    }
+  }
 
   const handleCategoryChange = async (
     e: React.ChangeEvent<
@@ -153,20 +146,7 @@ const ProductUpload: React.FC = () => {
     const categoryId = e.target.value;
 
     setProductData({ ...productData, categoryId, subcategoryId: "" });
-    setSubCategories(
-      allSubCategories.filter(
-        subCat => subCat.category.categoryId == categoryId
-      )
-    );
-    // try {
-    //   const response = await axios.get(
-    //     `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/subcategory/by-category?category=${categoryId}`
-    //   );
-    //   setSubCategories(response.data);
-    //   console.log("Subcategories: ", response.data);
-    // } catch (error) {
-    //   console.error("Error fetching subcategories:", error);
-    // }
+    fetchSubCategories(categoryId);
   };
 
   const handleSubCategorySelect = (subcategoryId: string) => {
@@ -199,15 +179,6 @@ const ProductUpload: React.FC = () => {
     }
   };
 
-  // const handleLabelImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   if (e.target.files && e.target.files.length > 0) {
-  //     const selectedImage = e.target.files[0];
-  //     setProductData({
-  //       ...productData,
-  //       labelImg: selectedImage,
-  //     });
-  //   }
-  // };
 
   const removeImage = (index: number) => {
     const updatedImages = [...productData.images];
@@ -244,7 +215,6 @@ const ProductUpload: React.FC = () => {
     formData.append("description", description);
 
     if (
-      !productData.superCategoryId ||
       !productData.categoryId ||
       !productData.subcategoryId ||
       productData.images.length == 0 ||
@@ -445,7 +415,7 @@ const ProductUpload: React.FC = () => {
                     />
                   </div>
 
-                  <div className="my-3">
+                  {/* <div className="my-3">
                     <label
                       className="block text-sm font-medium"
                       htmlFor="superCategoryId"
@@ -476,7 +446,7 @@ const ProductUpload: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </div> */}
 
                   <div className="my-3">
                     <label
@@ -490,34 +460,17 @@ const ProductUpload: React.FC = () => {
                       className="w-full p-2 border border-gray-300 rounded-md text-gray-800 mt-1"
                       name="categoryId"
                       value={productData.categoryId}
-                      onChange={handleCategoryChange}
+                      onChange={(e)=>{handleCategoryChange(e);
+                        fetchSubCategories(e.target.value);
+                      }}
                       required
                     >
                       <option value="" disabled>
                         Select Category
                       </option>
-                      {/* {categories
-                      ?.filter(cat =>
-                        allSubCategories.some(
-                          subCat => subCat.category.categoryId == cat.categoryId
-                        )
-                      )
-                      ?.map(category => (
-                        <option
-                          key={category.categoryId}
-                          value={category.categoryId}
-                        >
-                          {category.name}
-                        </option>
-                      ))} */}
-                      {filteredCategories
-                        ?.filter(cat =>
-                          allSubCategories.some(
-                            subCat =>
-                              subCat.category.categoryId == cat.categoryId
-                          )
-                        )
-                        ?.map(category => (
+                    
+                      {categories
+                                                ?.map(category => (
                           <option
                             key={category.categoryId}
                             value={category.categoryId}
@@ -547,7 +500,7 @@ const ProductUpload: React.FC = () => {
                       <option value="" disabled>
                         Select Subcategory
                       </option>
-                      {subCategories.map(subcategory => (
+                      {allSubCategories.map(subcategory => (
                         <option
                           key={subcategory.subcategoryId}
                           value={subcategory.subcategoryId}

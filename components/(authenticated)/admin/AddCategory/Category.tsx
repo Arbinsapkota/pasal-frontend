@@ -1,5 +1,6 @@
 "use client";
 import { getTokenFromCookies } from "@/components/cookie/cookie";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "@/components/env";
 import LoadingContent from "@/components/loaidng/LoaidngCotent";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,17 +21,10 @@ import "react-toastify/dist/ReactToastify.css";
 interface Category {
   categoryId: string;
   name: string;
-  superCategory: {
-    superCategoryId: string;
-    name: string;
-  };
+  categoryImageUrl?: string;
   createdAt: string;
 }
 
-interface ParentCategory {
-  superCategoryId: string;
-  name: string;
-}
 
 const CategoryForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -40,12 +34,8 @@ const CategoryForm: React.FC = () => {
     getLoading: true,
   });
   const [categoryName, setCategoryName] = useState<string>("");
+  const [categoryImage, setCategoryImage] = useState<File|null>();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [parentCategories, setParentCategories] = useState<ParentCategory[]>(
-    []
-  );
-  const [selectedParentCategory, setSelectedParentCategory] =
-    useState<string>("");
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const token = getTokenFromCookies();
 
@@ -70,67 +60,49 @@ const CategoryForm: React.FC = () => {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`
-      );
-      setCategories(response.data);
-      setSubmitLoaidng(prev => ({ ...prev, getLoading: false }));
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      toast.dismiss();
-      // toast.error("Error fetching categories.");
-      setSubmitLoaidng(prev => ({ ...prev, getLoading: false }));
-    }
-  };
-
-  const fetchParentCategories = async () => {
-    try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/superCategory/`
-      );
-      setParentCategories(response.data);
-    } catch (error) {
-      console.error("Error fetching supper categories:", error);
-      // toast.dismiss();
-      // toast.error("Error fetching supper categories.");
-    }
-  };
-
   useEffect(() => {
     fetchCategories();
-    fetchParentCategories();
   }, []);
 
-  const handleCategoryNameChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setCategoryName(e.target.value);
-  };
+  const fetchCategories = async () => {
+    await axios.get(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`
+      ).then((response) => {
+        setCategories(response.data);
+        console.log("Categories fetched:", response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching categories:", error);
+        toast.dismiss();
+        toast.error("Error fetching categories.");
+      })
+      .finally(() => {
+        setSubmitLoaidng((prev) => ({ ...prev, getLoading: false }));
+      });
+  }
 
- // For ShadCN Select
-const handleParentCategoryChange = (value: string) => {
-  setSelectedParentCategory(value);
-};
+
+    const handleCategoryNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+      setCategoryName(e.target.value);
+    };
+
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        setCategoryImage(file);
+      }
+    };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedParentCategory) {
-      toast.dismiss();
-      toast.error("Please select a supper category.");
-      return;
-    }
-    // const formData = {
-    //   categoryId: editingCategory?.categoryId,
-    //   name: categoryName,
-    //   superCategory: { superCategoryId: selectedParentCategory },
-    // };
-
-    const formData = new FormData();
+   const formData = new FormData();
     if (editingCategory) {
       formData.append("categoryId", editingCategory?.categoryId);
     }
     formData.append("name", categoryName);
-    formData.append("superCategory.superCategoryId", selectedParentCategory);
+    if (categoryImage) {
+      formData.append("categoryImage", categoryImage);
+    }
 
     try {
       setLoading(true);
@@ -170,7 +142,6 @@ const handleParentCategoryChange = (value: string) => {
         setDialog(false);
       }
       setCategoryName("");
-      setSelectedParentCategory("");
       fetchCategories();
     } catch (error) {
       console.error("Error creating/updating Category:", error);
@@ -187,7 +158,6 @@ const handleParentCategoryChange = (value: string) => {
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
     setCategoryName(category.name);
-    setSelectedParentCategory(category.superCategory.superCategoryId);
   };
 
   const handleDelete = async (id: string) => {
@@ -234,7 +204,7 @@ const handleParentCategoryChange = (value: string) => {
                 <th className="py-3 px-4 text-left text-sm">No.</th>
                 <th className="py-3 px-4 text-left text-sm">Category ID</th>
                 <th className="py-3 px-4 text-left text-sm">Category Name</th>
-                <th className="py-3 px-4 text-left text-sm">Supper Category</th>
+                <th className="py-3 px-4 text-left text-sm">Image</th>
                 <th className="py-3 px-4 text-left text-sm">Created At</th>
                 <th className="py-3 px-4 text-left text-sm">Actions</th>
               </tr>
@@ -256,8 +226,17 @@ const handleParentCategoryChange = (value: string) => {
                       </td>
                       <td className="py-3 px-4">{category.name}</td>
                       <td className="py-3 px-4">
-                        {category.superCategory.name}
+                        {category?.categoryImageUrl ? (
+                          <img
+                            src={`${NEXT_PUBLIC_CLOUDINARY_URL}${category.categoryImageUrl}`}
+                            alt={category.name}
+                            className="h-10 w-10 object-cover rounded"
+                          />
+                        ) : (
+                          "No Image"
+                        )}
                       </td>
+                    
                       <td className="py-3 px-4">
                         {new Date(category.createdAt).toLocaleString()}
                       </td>
@@ -330,35 +309,7 @@ const handleParentCategoryChange = (value: string) => {
                   {editingCategory ? "Edit Category" : "Create New Category"}
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-6 mb-8">
-                  <div>
-                    <label
-                      htmlFor="parentCategory"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Super Category:
-                    </label>
-                    <Select
-                      value={selectedParentCategory}
-                      onValueChange={handleParentCategoryChange}
-                      // className="w-full"
-                    >
-                      <SelectTrigger className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primaryBlue">
-                        <SelectValue placeholder="Select a super category" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60">
-                        {parentCategories.map(parentCategory => (
-                          <SelectItem
-                            key={parentCategory.superCategoryId}
-                            value={parentCategory.superCategoryId}
-                            className="py-2 text-base"
-                          >
-                            {parentCategory.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
+                                  <div>
                     <label
                       htmlFor="categoryName"
                       className="block text-sm font-medium text-gray-700"
@@ -372,6 +323,12 @@ const handleParentCategoryChange = (value: string) => {
                       onChange={handleCategoryNameChange}
                       className="mt-1 block w-full px-3 py-1.5  border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
                       required
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="mt-4 block w-full"
                     />
                   </div>
                   <div className=" flex gap-4">

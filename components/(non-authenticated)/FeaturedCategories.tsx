@@ -6,11 +6,12 @@ import Image from "next/image";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "@/components/env";
 
 type Category = {
   id?: string | number;
   name: string;
-  imageUrl?: string;
+  categoryImageUrl?: string;
 };
 
 const FeaturedCategories = () => {
@@ -21,11 +22,11 @@ const FeaturedCategories = () => {
     setFetching(true);
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/superCategory/`
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`
       );
-      setCategories(response.data as Category[]); // store categories
+      setCategories(response.data as Category[]);
     } catch (err) {
-      console.log("Error fetching categories: ", err);
+      console.log("Error fetching categories:", err);
     } finally {
       setFetching(false);
     }
@@ -37,87 +38,82 @@ const FeaturedCategories = () => {
 
   if (fetching) {
     return (
-      <div className="py-20 text-center text-gray-500">
+      <div className="py-20 text-center text-gray-500 animate-pulse">
         Loading categories...
       </div>
     );
   }
 
-  // Settings for react-slick carousel
   const carouselSettings = {
     dots: false,
     infinite: true,
     speed: 800,
     slidesToShow: 6,
     slidesToScroll: 1,
-    autoplay: true,          // ✅ enable autoplay
-    autoplaySpeed: 2000,     // ✅ 2 seconds per slide
-    arrows: false,           // optional: hide arrows
+    autoplay: true,
+    autoplaySpeed: 1800,
+    arrows: false,
     responsive: [
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: 4,
-        },
-      },
-      {
-        breakpoint: 640,
-        settings: {
-          slidesToShow: 2,
-        },
-      },
+      { breakpoint: 1024, settings: { slidesToShow: 4 } },
+      { breakpoint: 640, settings: { slidesToShow: 2 } },
     ],
   };
 
+  // ⭐ Show only first 6 categories in grid
+  const firstSix = categories.slice(0, 6);
+
   return (
-    <section className="py-10">
-      <div className="text-center">
-        <p className="text-gray-500 text-sm">Categories</p>
-        <h2 className="text-2xl font-semibold">
-          Featured <span className="text-green-600">Categories</span>
+    <section className="py-14 bg-gradient-to-b from-white to-gray-50">
+      <div className="text-center mb-10">
+        <p className="text-sm text-gray-500 tracking-wide">Shop by Category</p>
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+          Featured Categories
         </h2>
       </div>
 
-      <div className="mt-10">
-        {categories.length > 7 ? (
-          // Carousel for more than 7 categories
+      <div className="mt-8">
+        {categories.length > 6 ? (
+          // 🔥 More than 6 = Premium Carousel
           <Slider {...carouselSettings}>
             {categories.map((cat, index) => (
-              <div
-                key={cat.id || index}
-                className="text-center cursor-pointer px-2"
-              >
-                <div className="w-24 h-24 mx-auto rounded-full bg-gray-100 shadow flex items-center justify-center">
-                  <Image
-                    src={cat.imageUrl || "/placeholder.png"}
-                    alt={cat.name}
-                    width={60}
-                    height={60}
-                    className="object-contain"
-                  />
+              <div key={cat.id || index} className="px-3">
+                <div className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="w-24 h-24 mx-auto rounded-xl bg-gray-50 shadow-inner flex items-center justify-center overflow-hidden">
+                    <Image
+                      src={`${NEXT_PUBLIC_CLOUDINARY_URL}${cat.categoryImageUrl}` || "/placeholder.png"}
+                      alt={cat.name}
+                      width={80}
+                      height={80}
+                      className="object-contain transition-transform duration-300 hover:scale-110"
+                    />
+                  </div>
+                  <p className="mt-3 text-center font-semibold text-gray-700">
+                    {cat.name}
+                  </p>
                 </div>
-                <p className="mt-2 font-medium text-gray-700">{cat.name}</p>
               </div>
             ))}
           </Slider>
         ) : (
-          // Grid for 7 or fewer categories
+          // ⭐ Show clean premium grid of 6
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
-            {categories.map((cat, index) => (
+            {firstSix.map((cat, index) => (
               <div
                 key={cat.id || index}
-                className="text-center cursor-pointer hover:scale-105 transition"
+                className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all hover:-translate-y-1"
               >
-                <div className="w-24 h-24 mx-auto rounded-full bg-gray-100 shadow flex items-center justify-center">
+                <div className="w-24 h-24 mx-auto rounded-xl bg-gray-50 shadow-inner flex items-center justify-center overflow-hidden">
                   <Image
-                    src={cat.imageUrl || "/placeholder.png"}
+                    src={`${NEXT_PUBLIC_CLOUDINARY_URL}${cat.categoryImageUrl}` || "/placeholder.png"}
                     alt={cat.name}
-                    width={60}
-                    height={60}
-                    className="object-contain"
+                    width={80}
+                    height={80}
+                    className="object-contain transition-transform duration-300 hover:scale-110"
                   />
                 </div>
-                <p className="mt-2 font-medium text-gray-700">{cat.name}</p>
+                <p className="mt-3 text-center font-semibold text-gray-700">
+                  {cat.name}
+                </p>
               </div>
             ))}
           </div>
