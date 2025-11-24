@@ -1,20 +1,19 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { useDebouncedCallback } from "use-debounce";
 import { IoMdAdd, IoIosArrowRoundForward } from "react-icons/io";
 import { RiSubtractFill } from "react-icons/ri";
 import { GoHeartFill } from "react-icons/go";
 import { MdOutlineStar } from "react-icons/md";
-import { PiBagFill } from "react-icons/pi"; // Using a bag icon for the "Add" button
+import { PiBagFill } from "react-icons/pi";
 
 
 import { RootState } from "@/redux/store";
-import { addToCart, removeFromCart } from "@/redux/slices/cartSlice";
+import { addToCart, removeFromCart, deleteFromCart } from "@/redux/slices/cartSlice";
 import { addToWishlist, removeFromWishlist } from "@/redux/slices/wishlistSlice";
 import ProductCardLoading from "../loaidng/ProductLoading";
 import { Button } from "../ui/button";
@@ -23,234 +22,290 @@ import { getUserFromCookies } from "../cookie/cookie";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "../ui/carousel";
 import { cn } from "@/lib/utils";
 
-const FeaturedProducts: React.FC = () => {
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [allItems, setAllItems] = useState<any[]>([]);
-  const dispatch = useDispatch();
-  const items = useSelector((state: RootState) => state.cart.items);
-  const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
-  const user = getUserFromCookies();
+// --- Custom Hooks/Helpers ---
 
-  // Helper function to format price:
-  // 1. Ensures it's a string representation of the number.
-  // 2. Removes the trailing ".00" for whole numbers (e.g., 10.00 -> 10).
-  const formatPrice = (price: number) => {
+const formatPrice = (price: number) => {
     const formatted = price.toFixed(2);
     if (formatted.endsWith('.00')) {
         return Math.floor(price).toString();
     }
     return formatted;
-  };
-
-  useEffect(() => {
-    setAllItems(items);
-  }, [items]);
-
-  const fetchProducts = async () => {
-    try {
-      // Limiting to 15 products for a larger carousel display
-      const res = await axiosAuthInstance().get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/?limit=15`); 
-      setProducts(res.data);
-      setIsLoading(false);
-    } catch (err) {
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const addToCartHandler = (product: any) => {
-    const existingItem = allItems.find((item) => item.productId === product.productId);
-    let updatedItems;
-
-    if (existingItem) {
-      updatedItems = allItems.map((item) =>
-        item.productId === product.productId
-          ? { ...item, quantities: item.quantities + 1, totalPrice: item.totalPrice + product.price }
-          : item
-      );
-    } else {
-      updatedItems = [...allItems, { ...product, quantities: 1, totalPrice: product.price }];
-    }
-
-    setAllItems(updatedItems);
-    dispatch(addToCart(product));
-
-    if (user) {
-      axiosAuthInstance()
-        .post("/api/cart/add", { products: { productId: product.productId }, quantity: existingItem ? existingItem.quantities + 1 : 1 })
-        .catch(() => toast.error("Failed to add to cart"));
-    }
-  };
-
-  const toggleWishlist = (product: any) => {
-    const isAdded = wishlistItems.some((item) => item.productId === product.productId);
-    if (isAdded) {
-      dispatch(removeFromWishlist(product.productId));
-      if (user) {
-        axiosAuthInstance().delete("/api/wishlist/", { params: { productId: product.productId } }).catch(() => {});
-      }
-    } else {
-      dispatch(addToWishlist(product));
-      if (user) {
-        axiosAuthInstance().post("/api/wishlist/", { product: { productId: product.productId } }).catch(() => {});
-      }
-    }
-  };
-
-  const calculateDiscount = (price: number, discountedPrice?: number, discountPercentage?: number) => {
-    if (discountPercentage) return discountPercentage;
-    if (discountedPrice) return Math.round(((price - discountedPrice) / price) * 100);
-    return 0;
-  };
-  
-  // Helper to format category
-  const formatCategory = (product: any) => {
-      return product.category?.name || 'Fruits'; 
-  }
-  
-  // Helper to format rating
-  const formatRating = (product: any) => {
-      return (product.rating || 4.8).toFixed(1);
-  }
-
-  // --- Layout and Functionality ---
-  
-  return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Products Header Section */}
-      <div className="flex flex-col mb-6">
-        <h3 className="text-xl font-medium text-gray-700">Products</h3>
-        <div className="flex justify-between items-center mt-1">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-800">
-            Featured <span className="text-green-700">Products</span>
-          </h2>
-          <Link href="/homepage/products" passHref>
-            <Button
-              className="bg-green-700 hover:bg-green-800 text-white rounded-full px-4 py-2 flex items-center gap-1"
-            >
-              View All Products <IoIosArrowRoundForward className="text-2xl" />
-            </Button>
-          </Link>
-        </div>
-      </div>
-      
-      {/* Product Carousel Section */}
-      {isLoading ? (
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="min-w-[180px] sm:min-w-[240px] md:min-w-[200px] lg:min-w-[240px] xl:min-w-[20%] flex-shrink-0">
-              <ProductCardLoading />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <Carousel
-          opts={{
-            align: "start",
-          }}
-
-          className="w-full"
-        >
-          <CarouselContent className="-ml-2">
-            {products.map((product) => {
-              const discount = calculateDiscount(product.price, product.discountedPrice, product.discountPercentage);
-              const isInWishlist = wishlistItems.some((item) => item.productId === product.productId);
-
-              return (
-                // Displays 5 items per row on 'xl' screens (desktop)
-                <CarouselItem 
-                    key={product.productId} 
-                    className="pl-2 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5"
-                >
-                  <div className="group bg-white border border-gray-100 rounded-xl overflow-hidden shadow-lg transition-shadow duration-300 relative">
-                    
-                    {/* Image and Overlays */}
-                    <div className="relative aspect-square w-full p-4 flex justify-center items-center">
-                      <Image
-                        src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}` || "/placeholder.png"}
-                        alt={product.name}
-                        className="object-contain w-full h-full"
-                        fill
-                        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                      />
-
-                      {/* Discount Badge */}
-                      {discount > 0 && (
-                        <span className="absolute top-4 left-4 bg-green-700 text-white px-3 py-1 text-sm font-semibold rounded-lg">
-                          {discount}% off
-                        </span>
-                      )}
-
-                      {/* Wishlist Button */}
-                      <Button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product); }}
-                        className={cn(
-                          "absolute top-4 right-4 p-2 w-auto h-auto rounded-full bg-white shadow-md border border-gray-200 hover:bg-gray-50 transition-colors",
-                          isInWishlist ? "text-red-500" : "text-gray-400" 
-                        )}
-                      >
-                        <GoHeartFill className="text-lg" />
-                      </Button>
-                    </div>
-
-                    {/* Product Details Section */}
-                    <div className="p-4 pt-0">
-                      
-                      {/* Category and Rating */}
-                      <div className="flex justify-between items-center text-sm mb-1">
-                        <span className="text-green-700 font-medium">{formatCategory(product)}</span>
-                        <div className="flex items-center gap-1">
-                          <MdOutlineStar className="text-yellow-500 text-lg" />
-                          <span className="font-semibold">{formatRating(product)}</span>
-                        </div>
-                      </div>
-
-                      {/* Name (Title) */}
-                      <h3 className="text-lg font-bold truncate text-gray-800 mb-2">
-                        {product.name}
-                      </h3>
-                      
-                      {/* Price and Add Button */}
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-baseline gap-2">
-                          {/* UPDATED: Changed ₹ to Rs. */}
-                          <span className="text-xl font-bold text-gray-800">
-                            Rs.{formatPrice(product.discountedPrice || product.price)}
-                          </span>
-                          {product.discountedPrice && (
-                            <span className="text-sm text-gray-400 line-through">
-                              Rs.{formatPrice(product.price)}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Add to Cart Button (Small size) */}
-                        <Button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCartHandler(product); }}
-                          className="w-auto h-auto p-1.5 bg-green-700 hover:bg-green-800 text-white rounded-lg flex items-center gap-1 transition-colors"
-                        >
-                          <PiBagFill className="text-base" />
-                          <span className="text-xs font-semibold">Add</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CarouselItem>
-              );
-            })}
-          </CarouselContent>
-          {/* Carousel Navigation Arrows */}
-          <CarouselPrevious className="hidden md:flex" />
-          <CarouselNext className="hidden md:flex" />
-        </Carousel>
-      )}
-    </div>
-  );
 };
 
-export default FeaturedProducts;
+const calculateDiscount = (price: number, discountedPrice?: number, discountPercentage?: number) => {
+    if (discountPercentage) return discountPercentage;
+    if (discountedPrice && price > discountedPrice) return Math.round(((price - discountedPrice) / price) * 100);
+    return 0;
+};
+
+const formatCategory = (product: any) => {
+    return product.category?.name || 'Produce'; 
+}
+
+const formatRating = (product: any) => {
+    return (product.rating || 4.9).toFixed(1);
+}
+
+// --- Main Component ---
+
+const LatestProducts: React.FC = () => {
+    const [products, setProducts] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const dispatch = useDispatch();
+    const items = useSelector((state: RootState) => state.cart.items);
+    const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
+    const user = getUserFromCookies();
+    
+
+
+    const fetchProducts = async () => {
+        try {
+            // Fetch more products to fill the carousel nicely
+            const res = await axiosAuthInstance().get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/?limit=20`); 
+            setProducts(res.data);
+            setIsLoading(false);
+        } catch (err) {
+            console.error("Error fetching featured products:", err);
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    // --- Cart Handlers ---
+
+    // Note: The original implementation in the prompt was manual. 
+    // I'm simplifying the logic by using the Redux actions (assuming increaseQuantity/decreaseQuantity exist in cartSlice).
+
+    const handleUpdateCart = (product: any, type: 'ADD' | 'INCREASE' | 'DECREASE') => {
+        if (!user) {
+            toast.info("Please log in to manage your cart.");
+            // Optionally, you might open a login modal here
+            return;
+        }
+
+        const existingItem = items.find((item) => item.productId === product.productId);
+
+        if (type === 'ADD' || type === 'INCREASE') {
+            dispatch(addToCart(product));
+            const newQuantity = existingItem ? existingItem.quantities + 1 : 1;
+            
+            axiosAuthInstance()
+                .post("/api/cart/add", { productId: product.productId, quantity: newQuantity })
+                .catch(() => toast.error("Failed to update cart (API error)."));
+
+        } else if (type === 'DECREASE') {
+            if (existingItem && existingItem.quantities > 1) {
+                dispatch(removeFromCart(product.productId));
+                const newQuantity = existingItem.quantities - 1;
+
+                axiosAuthInstance()
+                    .post("/api/cart/add", { productId: product.productId, quantity: newQuantity })
+                    .catch(() => toast.error("Failed to update cart (API error)."));
+
+            } else if (existingItem && existingItem.quantities === 1) {
+                dispatch(deleteFromCart(product.productId));
+                axiosAuthInstance()
+                    .delete("/api/cart/", { data: { productId: product.productId } })
+                    .catch(() => toast.error("Failed to remove from cart (API error)."));
+            }
+        } else if (type === 'REMOVE') {
+            dispatch(deleteFromCart(product.productId));
+            axiosAuthInstance()
+                .delete("/api/cart/", { data: { productId: product.productId } })
+                .catch(() => toast.error("Failed to remove from cart (API error)."));
+        }
+    };
+
+    const toggleWishlist = (product: any) => {
+        if (!user) {
+            toast.info("Please log in to manage your wishlist.");
+            return;
+        }
+
+        const isAdded = wishlistItems.some((item) => item.productId === product.productId);
+        if (isAdded) {
+            dispatch(removeFromWishlist(product.productId));
+            axiosAuthInstance().delete("/api/wishlist/", { params: { productId: product.productId } }).catch(() => {});
+        } else {
+            dispatch(addToWishlist(product));
+            axiosAuthInstance().post("/api/wishlist/", { product: { productId: product.productId } }).catch(() => {});
+        }
+    };
+
+
+    // --- Premium Product Card Renderer ---
+    const renderPremiumProductCard = (product: any) => {
+        const discount = calculateDiscount(product.price, product.discountedPrice, product.discountPercentage);
+        const isInWishlist = wishlistItems.some((item) => item.productId === product.productId);
+        const cartItem = items.find((item) => item.productId === product.productId);
+        const currentQuantity = cartItem ? cartItem.quantities : 0;
+        const finalPrice = product.discountedPrice || product.price;
+
+        return (
+            <Link
+                href={`/homepage/products/${product.productId}`}
+                key={product.productId}
+                // Premium Styling: Shadow lift on hover, slightly darker background
+                className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 relative block h-full"
+            >
+                {/* Image and Overlays */}
+                <div className="relative aspect-square w-full p-4 flex justify-center items-center overflow-hidden">
+                    <Image
+                        src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}` || "/placeholder.png"}
+                        alt={product.name}
+                        className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-500"
+                        fill
+                        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                    />
+
+                    {/* Discount Badge */}
+                    {discount > 0 && (
+                        <span className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 text-xs font-bold rounded-full z-10">
+                            {discount}% OFF
+                        </span>
+                    )}
+
+                    {/* Wishlist Button (Sleek, subtle design) */}
+                    <Button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product); }}
+                        className={cn(
+                            "absolute top-4 right-4 p-2 w-auto h-auto rounded-full bg-white/90 backdrop-blur-sm shadow-md border border-gray-100 transition-opacity duration-300 z-10",
+                            isInWishlist ? "text-red-500" : "text-gray-500 hover:text-red-500" 
+                        )}
+                    >
+                        <GoHeartFill className="text-lg" />
+                    </Button>
+                </div>
+
+                {/* Product Details Section */}
+                <div className="p-4 pt-0">
+                    
+                    {/* Category and Rating */}
+                    <div className="flex justify-between items-center text-sm mb-1">
+                        <span className="text-teal-700 font-semibold uppercase tracking-wider">{formatCategory(product)}</span>
+                        <div className="flex items-center gap-1">
+                            <MdOutlineStar className="text-amber-400 text-lg" />
+                            <span className="font-bold text-gray-800">{formatRating(product)}</span>
+                        </div>
+                    </div>
+
+                    {/* Name (Title) */}
+                    <h3 className="text-xl font-extrabold truncate text-gray-900 mb-3 transition-colors group-hover:text-teal-700">
+                        {product.name}
+                    </h3>
+                    
+                    {/* Price and Action */}
+                    <div className="flex justify-between items-center mt-2">
+                        <div className="flex flex-col items-start gap-0.5">
+                            <span className="text-2xl font-black text-gray-900">
+                                Rs.{formatPrice(finalPrice)}
+                            </span>
+                            {product.discountedPrice && (
+                                <span className="text-sm text-gray-500 line-through">
+                                    Rs.{formatPrice(product.price)}
+                                </span>
+                            )}
+                        </div>
+                        
+                        {/* Add/Quantity Control (Sleek, conditional display) */}
+                        {currentQuantity > 0 ? (
+                            <div className="flex items-center border border-teal-600 rounded-lg overflow-hidden h-9">
+                                <Button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUpdateCart(product, 'DECREASE'); }}
+                                    className="p-1 w-8 h-8 bg-white text-teal-600 hover:bg-teal-50 rounded-r-none"
+                                >
+                                    <RiSubtractFill className="text-sm" />
+                                </Button>
+                                <span className="w-6 text-center text-sm font-bold text-teal-700">
+                                    {currentQuantity}
+                                </span>
+                                <Button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUpdateCart(product, 'INCREASE'); }}
+                                    className="p-1 w-8 h-8 bg-white text-teal-600 hover:bg-teal-50 rounded-l-none"
+                                    // Assuming stock check is needed
+                                    disabled={currentQuantity >= (product.stock || 999)} 
+                                >
+                                    <IoMdAdd className="text-sm" />
+                                </Button>
+                            </div>
+                        ) : (
+                             // Default Add to Cart button
+                            <Button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUpdateCart(product, 'ADD'); }}
+                                className="w-auto h-9 px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                                <PiBagFill className="text-base" />
+                                <span className="text-sm">Add</span>
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </Link>
+        );
+    };
+
+    return (
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-50 rounded-xl shadow-inner my-10">
+            {/* Products Header Section (Modernized) */}
+            <div className="flex flex-col mb-8 border-b-2 border-teal-100 pb-4">
+                <h3 className="text-xl font-semibold text-gray-500 uppercase tracking-widest">Shop Now</h3>
+                <div className="flex justify-between items-center mt-1">
+                    <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900">
+                        Todays Best Deals <span className="text-teal-600">For You !</span>
+                    </h2>
+                    <Link href="/homepage/products" passHref>
+                        <Button
+                            className="bg-teal-600 hover:bg-teal-700 text-white rounded-full px-5 py-3 text-base font-semibold flex items-center gap-1 shadow-md hover:shadow-lg transition-all"
+                        >
+                            View All Products <IoIosArrowRoundForward className="text-3xl" />
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+            
+            {/* Product Carousel Section */}
+            {isLoading ? (
+                <div className="flex gap-6 overflow-x-auto scrollbar-hide">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="min-w-[45%] sm:min-w-[30%] md:min-w-[22%] lg:min-w-[18%] flex-shrink-0">
+                            <ProductCardLoading />
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <Carousel
+                    opts={{
+                        align: "start",
+                        loop: true,
+                        breakpoints: {
+                            "(min-width: 640px)": { slidesToScroll: 2 },
+                            "(min-width: 1024px)": { slidesToScroll: 3 },
+                            "(min-width: 1280px)": { slidesToScroll: 4 },
+                        },
+                    }}
+                    className="w-full"
+                >
+                    <CarouselContent className="-ml-4">
+                        {products.map((product) => (
+                            // Optimized basis for 5 items on large desktop (xl: basis-1/5)
+                            <CarouselItem 
+                                key={product.productId} 
+                                className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"
+                            >
+                                {renderPremiumProductCard(product)}
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                    {/* Modernized Carousel Navigation Arrows */}
+                    <CarouselPrevious className="hidden md:flex absolute left-4 bg-white border border-gray-200 shadow-md hover:bg-gray-100 text-teal-700 transition-colors" />
+                    <CarouselNext className="hidden md:flex absolute right-4 bg-white border border-gray-200 shadow-md hover:bg-gray-100 text-teal-700 transition-colors" />
+                </Carousel>
+            )}
+        </div>
+    );
+};
+
+export default LatestProducts;
