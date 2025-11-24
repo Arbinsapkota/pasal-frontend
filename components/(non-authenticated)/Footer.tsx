@@ -17,6 +17,7 @@ interface Category {
   categoryId: string;
   name: string;
 }
+
 export default function Footer() {
   const { setIsLoginModalOpen } = useModal();
   const user = getUserFromCookies();
@@ -25,221 +26,219 @@ export default function Footer() {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    // setIsLoading(true);
     const fetchCategories = async () => {
       try {
-        // setIsLoading(true);
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`
         );
         setCategories(response.data.slice(0, 7));
-        // fetchAllProducts(response.data);
-        // setIsLoading(false);
       } catch (error) {
         console.error("Error fetching categories:", error);
-        // toast.error("Failed to load categories.");
-        // setIsLoading(false);
       } finally {
         setIsLoading(false);
       }
     };
+
+    const fetchProducts = () => {
+      axiosInstance()
+        .get("/api/product/")
+        .then(res => {
+          setProducts(res.data);
+        })
+        .catch(err => console.error("Err", err));
+    };
+
     fetchCategories();
-    axiosInstance()
-      .get("/api/product/")
-      .then(res => {
-        setProducts(res.data);
-      })
-      .catch(err => console.error("Err", err));
+    fetchProducts();
   }, []);
 
   return (
-    <footer className="bg-[#492abc] text-white py-8 px-4 md:px-8 mt-8">
-      <div className=" mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <div>
-          <h2 className="text-lg font-bold sm:mb-4 mb-2">ABOUT US</h2>
-          <div className="flex flex-col gap-4">
-            <div className="space-y-2">
-              <p className="flex items-center">
-                <Phone className="mr-2 h-5 w-5" /> 01-4016520 / +977-9762111788
+    // 1. Deep, dark background color for a premium, contrasting look
+    <footer className="bg-slate-900 text-gray-300 py-16 px-6 lg:px-12">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[1.5fr_1fr_1fr_1.5fr] gap-12 border-b border-gray-700 pb-12">
+          
+          {/* Column 1: ABOUT US & Contact Info (Expanded) */}
+          <div className="col-span-2 lg:col-span-1">
+            {/* Replace with a logo/brand element for a complete look */}
+            <h2 className="text-2xl font-extrabold text-white tracking-wider mb-6">
+              Puja Pasal
+            </h2>
+            <div className="space-y-4 text-sm font-light">
+              <p className="flex items-start transition-colors duration-200">
+                <MapPin className="mr-3 h-5 w-5 text-cyan-400 mt-0.5" />
+                <span>Green Hill City , Mulpani , Nepal</span>
+              </p>
+              <p className="flex items-center transition-colors duration-200">
+                <Phone className="mr-3 h-5 w-5 text-cyan-400" /> 
+                 +977-9851005370 / 9869400864 
               </p>
               <a
                 target="_blank"
-                href="mailto:info@etechintl.com.np"
-                className="flex items-center"
+                href="mailto:info@pujapasal.com.np"
+                className="flex items-center hover:text-cyan-400 transition-colors duration-200"
               >
-                <IoMdMail className="mr-2 h-5 w-5" />
-                info@etechintl.com.np
+                <IoMdMail className="mr-3 h-5 w-5 text-cyan-400" />
+                info@pujapasal.com.np
               </a>
-              <a
-                target="_blank"
-                href="https://maps.app.goo.gl/CvJc6hDeaYuHbSYGA"
-                className="flex items-start"
-              >
-                <MapPin className="mr-2 h-5 w-5 mt-1" />
-                <span>Kathmandu, Nepal</span>
-              </a>
-              {/* <p className="flex items-start">
-                <MapPin className="mr-2 h-5 w-5 mt-1" />
-                <span>701 East Pioneer Pkwy. Arlington, TX 76010</span>
-              </p> */}
             </div>
-            <div className=" hidden lg:block">
-              <p className="mb-2 ">Follow us On</p>
-              <div className="flex space-x-3">
+            
+            {/* Social Media (Visible on all sizes) */}
+            <div className="mt-8">
+              <p className="text-gray-400 text-sm mb-3 font-semibold uppercase tracking-wider">
+                Connect With Us
+              </p>
+              <div className="flex space-x-4">
                 <a
                   href="https://www.facebook.com/etechinternational2015/"
-                  className="text-white hover:text-blue-400 transition-colors duration-200"
+                  className="text-gray-400 hover:text-cyan-400 transition-colors duration-200"
+                  aria-label="Facebook"
                 >
-                  <Facebook className="h-8 w-8" />
+                  <Facebook className="h-6 w-6" />
                 </a>
                 <a
                   href="https://www.instagram.com/etechinternational2015/"
-                  className="text-white hover:text-pink-400 transition-colors duration-200"
+                  className="text-gray-400 hover:text-cyan-400 transition-colors duration-200"
+                  aria-label="Instagram"
                 >
-                  <Instagram className="h-8 w-8" />
+                  <Instagram className="h-6 w-6" />
                 </a>
+                {/* Add more icons (e.g., LinkedIn, X/Twitter) for a modern approach */}
               </div>
             </div>
           </div>
-        </div>
-        <div className="lg:mx-auto">
-          <h2 className="text-lg font-bold sm:mb-4 mb-2">MY ACCOUNT</h2>
-          <ul className="space-y-2">
-            <li>
-              {user ? (
-                <a href={"/account"} className="hover:underline">
-                  My Account
-                </a>
-              ) : (
-                <p
-                  className="hover:underline cursor-pointer"
-                  onClick={() => {
-                    if (!user) {
-                      setIsLoginModalOpen(true);
-                    }
-                  }}
-                >
-                  My Account
-                </p>
-              )}
-            </li>
 
-            <li>
-              <a
-                target="_blank"
-                href="/PrivacyPolicy.pdf"
-                className="hover:underline"
-              >
-                Privacy Policy
-              </a>
-            </li>
-            {/* <li>
-              <a href="/policies/privacy-policy" className="hover:underline">
-                Privacy Policy
-              </a>
-            </li> */}
-            {/* <li>
-              <a href="/policies/returns" className="hover:underline">
-                Returns
-              </a>
-            </li>
-            <li>
-              <a
-                href="/policies/terms-and-conditions"
-                className="hover:underline"
-              >
-                Terms & Conditions
-              </a>
-            </li> */}
-          </ul>
-        </div>
-        <div className="lg:mx-auto">
-          <h2 className="text-lg font-bold sm:mb-4 mb-2">CATEGORIES</h2>
-          <ul className="sm:space-y-2">
-            {isLoading
-              ? Array.from({ length: 4 }).map((_, index) => {
-                  return <LoadingContent key={index} className="h-5 w-full " />;
-                })
-              : categories
-                  ?.filter(category =>
-                    products?.some(
-                      product => product.category == category.categoryId
+          {/* Column 2: CATEGORIES (Data-driven section) */}
+          <div>
+            <h2 className="text-lg font-bold text-white mb-6 uppercase tracking-wider">
+              Popular Categories
+            </h2>
+            <ul className="space-y-3 text-sm font-light">
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, index) => (
+                    // 2. Use a better loader for a premium feel (e.g., a subtle dark skeleton)
+                    <LoadingContent key={index} className="h-4 w-4/5 bg-gray-700 rounded" />
+                  ))
+                : categories
+                    ?.filter(category =>
+                      products?.some(
+                        product => product.category == category.categoryId
+                      )
                     )
-                  )
-                  ?.map((category, index) => {
-                    return (
+                    ?.map((category, index) => (
                       <li key={index}>
-                        <p
-                          // href={`/homepage/products?category=${category?.categoryId}`}
-                          className="hover:underline"
+                        <Link
+                          href={`/products?category=${category?.categoryId}`}
+                          className="hover:text-cyan-400 transition-colors duration-200 block"
                         >
                           {capitalizeFirstLetter(category?.name)}
-                        </p>
+                        </Link>
                       </li>
-                    );
-                  })}
-          </ul>
-        </div>
-        <div>
-          {/* <h2 className="text-lg font-bold mb-4">NEWSLETTER SIGNUP</h2> */}
-          {/* <form className="mb-4">
-            <div className="flex">
-              <input
-                type="email"
-                placeholder="Enter Your Email"
-                className="w-full px-3 py-2 text-indigo-900 bg-white rounded-l-md focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-blue-500 text-white px-4 py-2 rounded-r-md hover:bg-blue-600 focus:outline-none transition-colors duration-200"
-              >
-                <Mail className="h-5 w-5" />
-              </button>
-            </div>
-          </form> */}
-          <div className=" block lg:hidden">
-            <p className="mb-2 ">Follow us On</p>
-            <div className="flex space-x-3">
-              <a
-                target="_blank"
-                href="https://www.facebook.com/etechinternational2015/"
-                className="text-white hover:text-blue-400 transition-colors duration-200"
-              >
-                <Facebook className="h-8 w-8" />
-              </a>
-              <a
-                target="_blank"
-                href="https://www.instagram.com/etechinternational2015/"
-                className="text-white hover:text-pink-400 transition-colors duration-200"
-              >
-                <Instagram className="h-8 w-8" />
-              </a>
+                    ))}
+            </ul>
+          </div>
+
+          {/* Column 3: MY ACCOUNT / QUICK LINKS */}
+          <div>
+            <h2 className="text-lg font-bold text-white mb-6 uppercase tracking-wider">
+              Customer Links
+            </h2>
+            <ul className="space-y-3 text-sm font-light">
+              <li>
+                {user ? (
+                  <Link href={"/account"} className="hover:text-cyan-400 transition-colors duration-200">
+                    My Account
+                  </Link>
+                ) : (
+                  <p
+                    className="hover:text-cyan-400 cursor-pointer transition-colors duration-200"
+                    onClick={() => setIsLoginModalOpen(true)}
+                  >
+                    Login / Register
+                  </p>
+                )}
+              </li>
+              <li>
+                <Link 
+                  href="/track-order" // Placeholder for an E-commerce essential link
+                  className="hover:text-cyan-400 transition-colors duration-200"
+                >
+                  Track Order
+                </Link>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  href="/PrivacyPolicy.pdf"
+                  className="hover:text-cyan-400 transition-colors duration-200"
+                >
+                  Privacy Policy
+                </a>
+              </li>
+              {/* Add more essential links */}
+              <li>
+                <Link 
+                  href="/shipping-info" // Placeholder for an E-commerce essential link
+                  className="hover:text-cyan-400 transition-colors duration-200"
+                >
+                  Shipping Info
+                </Link>
+              </li>
+            </ul>
+          </div>
+          
+          {/* Column 4: Newsletter/Brand Statement (Added for premium feel) */}
+          <div className="col-span-2 md:col-span-1">
+             <h2 className="text-lg font-bold text-white mb-6 uppercase tracking-wider">
+              Our Vision
+            </h2>
+            <p className="text-sm font-light mb-6">
+              We are dedicated to providing the latest technology products with unmatched service and reliability. ETECH is your trusted partner for innovation.
+            </p>
+            {/* Adding a newsletter/callout for advanced design */}
+            <div className="bg-gray-800 p-4 rounded-lg">
+                <p className="text-md font-semibold text-cyan-400 mb-2">Subscribe to our Newsletter</p>
+                <p className="text-xs text-gray-500 mb-3">Get exclusive discounts and product updates.</p>
+                <form className="flex">
+                    <input
+                      type="email"
+                      placeholder="Your Email Address"
+                      className="w-full px-3 py-2 text-white bg-gray-700 border-none rounded-l-md focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="bg-cyan-500 text-gray-900 px-4 py-2 rounded-r-md font-semibold hover:bg-cyan-400 transition-colors duration-200 text-sm"
+                    >
+                      Subscribe
+                    </button>
+                </form>
             </div>
           </div>
         </div>
-      </div>
-      <hr className="border-t border-white mt-8" />
-      <div className="mt-4 text-center text-sm text-gray-100 sm:flex justify-between">
-        <p>
-          Copyright © 2025 ETECH. All rights reserved. Powered by
-          <Link
-            className={"hover:underline pl-1"}
-            target="_blank"
-            href={"https://maps.app.goo.gl/CvJc6hDeaYuHbSYGA"}
-          >
-            ETech International Pvt. Ltd.
-          </Link>
-        </p>
-        <p>
-          Developed by:
-          <Link
-            className={"hover:underline pl-1"}
-            target="_blank"
-            href={"https://www.mspsolution.com.np/"}
-          >
-            MSP Solution Pvt. Ltd.
-          </Link>
-        </p>
+
+        {/* Footer Bottom Bar (Copyright) */}
+        <div className="mt-8 text-center text-xs sm:text-sm text-gray-500 sm:flex justify-between items-center">
+          <p className="order-2 sm:order-1 mb-2 sm:mb-0">
+            Copyright © {new Date().getFullYear()} ETECH. All rights reserved. 
+            <Link
+              className={"hover:text-cyan-400 pl-1 font-medium transition-colors duration-200"}
+              target="_blank"
+              href={"https://maps.app.goo.gl/CvJc6hDeaYuHbSYGA"}
+            >
+              ETech International Pvt. Ltd.
+            </Link>
+          </p>
+          <p className="order-1 sm:order-2">
+            Developed by:
+            <Link
+              className={"hover:text-cyan-400 pl-1 font-medium transition-colors duration-200"}
+              target="_blank"
+              href={"https://www.mspsolution.com.np/"}
+            >
+              MSP Solution Pvt. Ltd.
+            </Link>
+          </p>
+        </div>
       </div>
     </footer>
   );
