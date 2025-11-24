@@ -69,10 +69,10 @@ const AdminHome: React.FC = () => {
   useEffect(() => {
     axiosAuthInstance()
       .get("/api/order/processing")
-      .then(res => {
+      .then((res) => {
         setProcessingOrder(res.data);
       })
-      .catch(err => console.error("Error fetching order number", err));
+      .catch((err) => console.error("Error fetching order number", err));
   }, [isOrderUpdated]);
 
   const section = {
@@ -105,7 +105,7 @@ const AdminHome: React.FC = () => {
     Banner: "banner",
   };
 
-  const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
   const handleGalleryClick = () => {
     setPage("gallery");
@@ -140,25 +140,25 @@ const AdminHome: React.FC = () => {
                 }}
               >
                 <Image
-                  src="/etech-logo.jpg"
-                  alt="ETECH Logo"
+                  src="/newlogo.png"
+                  alt=" Logo"
                   height={400}
                   width={400}
-                  className="h-12  w-40 border rounded-lg border-gray-300"
+                  className="h-16  w-40  rounded-lg "
                 />
               </div>
               <Button onClick={toggleSidebar} className="lg:hidden">
                 <RiMenuFold3Line className="text-2xl" />
               </Button>
             </div>
-            <Image
+            {/* <Image
               src="/adminsidebarbaner.png"
               alt="Total doers"
               width={250}
               height={150}
               className="m-1 w-full h-[130px] object-fill border-b-2
               "
-            />
+            /> */}
             {Object.entries(section).map(([displayName, id]) => {
               return (
                 <Tabs.Trigger

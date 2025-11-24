@@ -27,7 +27,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ETECH",
+  title: "Puja Pasal",
   description:
     "ETECH is your trusted source for innovative tech solutions, products, and services that power the future. Discover cutting-edge electronics, gadgets, and expert support.",
 };

@@ -25,7 +25,7 @@ function AdminLogin() {
   const [showPassword, setShowPassowrd] = useState<boolean>(false);
 
   const tooglePassword = () => {
-    return setShowPassowrd(prev => !prev);
+    return setShowPassowrd((prev) => !prev);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -75,7 +75,7 @@ function AdminLogin() {
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Image
-          src="/etech-logo.jpg"
+          src="/newlogo.png"
           alt="ETECH"
           width={540}
           height={540}
@@ -85,11 +85,8 @@ function AdminLogin() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-xl sm:px-0 px-2">
         <div className="bg-white py-8 px-4 shadow rounded-lg sm:px-10 ">
-          <h2 className=" mb-8 text-center sm:text-3xl text-xl leading-9 font-extrabold text-primaryBlue">
-            Admin{" "}
-            <span className="font-extrabold text-gray-800 underline ">
-              Login
-            </span>
+          <h2 className=" mb-8 text-center sm:text-3xl text-xl leading-9 font-extrabold ">
+            Admin Login
           </h2>
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
@@ -109,7 +106,7 @@ function AdminLogin() {
                   disabled={loading}
                   placeholder="Enter your email address."
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-md"
                 />
               </div>
@@ -132,7 +129,7 @@ function AdminLogin() {
                   placeholder="Enter your password."
                   disabled={loading}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-md"
                 />
                 <button

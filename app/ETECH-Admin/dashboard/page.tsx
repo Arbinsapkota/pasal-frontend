@@ -4,7 +4,7 @@ import { CouponsProvider } from "@/components/(authenticated)/admin/context/Coup
 import { ProductProvider } from "@/components/(authenticated)/admin/context/ProductContext";
 import { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "Admin Dashboard - ETECH",
+  title: "Admin Dashboard - Puja Pasal",
   description:
     "Access the ETECH Admin Dashboard to manage products, categories, users, and orders efficiently. Monitor activities and control your store operations in one place.",
 };

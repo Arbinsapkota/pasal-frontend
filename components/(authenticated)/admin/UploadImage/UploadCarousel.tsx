@@ -62,7 +62,7 @@ const UploadCarousel: React.FC = () => {
     setError(null);
 
     try {
-      const uploadPromises = files.map(file => {
+      const uploadPromises = files.map((file) => {
         const formData = new FormData();
         formData.append("mediaFile", file);
         formData.append("mediaType", "FEATURE");
@@ -82,7 +82,7 @@ const UploadCarousel: React.FC = () => {
       await Promise.all(uploadPromises);
       setFiles([]);
       toast.success("Carousel Uploaded successfully!");
-      setIsChanged(prev => !prev);
+      setIsChanged((prev) => !prev);
     } catch (err) {
       console.error("Error uploading images:", err);
       setError("Failed to upload one or more images. Please try again.");
@@ -97,7 +97,7 @@ const UploadCarousel: React.FC = () => {
       await axiosAuthInstance().delete(
         `${API_BASE_URL}/api/media/?imageId=${id}`
       );
-      setIsChanged(prev => !prev);
+      setIsChanged((prev) => !prev);
       toast.success("Carousel deleted successfully!");
     } catch (err) {
       console.error("Error deleting image:", err);
@@ -128,7 +128,9 @@ const UploadCarousel: React.FC = () => {
             />
           ) : (
             <Image
-              src={`${NEXT_PUBLIC_CLOUDINARY_URL}${URL.createObjectURL(files[0])}`}
+              src={`${NEXT_PUBLIC_CLOUDINARY_URL}${URL.createObjectURL(
+                files[0]
+              )}`}
               alt="Selected Preview"
               width={400}
               height={400}

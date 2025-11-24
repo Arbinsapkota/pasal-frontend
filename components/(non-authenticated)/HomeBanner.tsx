@@ -66,7 +66,7 @@ const CarousalBanner: React.FC = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex(prevIndex => {
+      setCurrentIndex((prevIndex) => {
         return (prevIndex + 1) % backgroundImages.length;
       });
     }, 4000);
@@ -84,13 +84,13 @@ const CarousalBanner: React.FC = () => {
   }, []);
 
   const handlePrevious = () => {
-    setCurrentIndex(prevIndex =>
+    setCurrentIndex((prevIndex) =>
       prevIndex === 0 ? backgroundImages.length - 1 : prevIndex - 1
     );
   };
 
   const handleNext = () => {
-    setCurrentIndex(prevIndex => (prevIndex + 1) % backgroundImages.length);
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length);
   };
 
   return (
@@ -164,7 +164,10 @@ const CarousalBanner: React.FC = () => {
             <>
               <div className="relative rounded shadow-lg ">
                 <Image
-                  src={popupImage || "/etech-logo.jpg"} // Default to logo if no popup image is available
+                  src={
+                    `${NEXT_PUBLIC_CLOUDINARY_URL}${popupImage}` ||
+                    "/etech-logo.jpg"
+                  } // Default to logo if no popup image is available
                   alt="Popup Image"
                   width={600}
                   height={600}
