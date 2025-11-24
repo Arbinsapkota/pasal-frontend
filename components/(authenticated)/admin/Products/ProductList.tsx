@@ -206,7 +206,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
               <th className="py-3 px-4 border-b ">S.N</th>
               <th className="py-3 px-4 border-b ">Image</th>
               <th className="py-3 px-4 border-b">Name</th>
-              <th className="py-3 px-4 border-b">Super Category</th>
+              <th className="py-3 px-4 border-b">Category</th>
               <th className="py-3 px-4 border-b">Stock</th>
               <th className="py-3 px-4 border-b">Price</th>
               <th className="py-3 px-4 border-b">Discount </th>
@@ -236,11 +236,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
 
                     <td className="py-3 px-4 text-center ">
                       <Image
-                        src={
-                          product?.imageUrls?.[0]
-                            ? product?.imageUrls?.[0]
-                            : "/product.png"
-                        }
+                        src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product?.imageUrls[0]}` || "/placeholder.png"}
                         alt={product?.name}
                         width={200}
                         height={200}
@@ -251,7 +247,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
                       {product?.name}
                     </td>
                     <td className="py-3 px-4 text-center   ">
-                      {product?.superCategoryName}
+                      {product?.categoryName}
                     </td>
 
                     <td className="py-3 px-4 text-center text-primary">

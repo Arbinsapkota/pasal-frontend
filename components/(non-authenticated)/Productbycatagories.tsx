@@ -1,3 +1,4 @@
+"use client";
 import {
   Select,
   SelectContent,
@@ -14,7 +15,7 @@ import { RootState } from "@/redux/store";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import { BsDash } from "react-icons/bs";
 import { FaAngleRight, FaChevronLeft } from "react-icons/fa";
 import { GoHeartFill } from "react-icons/go";
@@ -28,6 +29,16 @@ import { useModal } from "../providers/ModalStateProvider";
 import { Button, buttonVariants } from "../ui/button";
 import CategoriesBanner from "./CategoriesBanner";
 import ProductsSidebar from "./ProductsSidebar";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
+
+// Helper utility to calculate discount percentage (corrected logic)
+const getDiscountPercent = (price: number, discountedPrice: number): number => {
+    if (discountedPrice >= price || price <= 0) return 0;
+    const discount = ((price - discountedPrice) / price) * 100;
+    return Math.round(discount);
+};
+
+// ... Interface definitions remain the same
 interface SuperCategory {
   superCategoryId: string;
   name: string;
@@ -101,9 +112,6 @@ const ProductbyCategories: React.FC = () => {
       setStoreItems,
     });
 
-  // mahendra
-
-  // mahendra
 
   const { setIsLoginModalOpen } = useModal();
 
@@ -112,12 +120,13 @@ const ProductbyCategories: React.FC = () => {
     discountedPrice: number
   ): number => {
     if (!discountedPrice || price <= 0) return 0;
-    const discount = (discountedPrice / price) * 100;
+    // Correct formula:
+    const discount = ((price - discountedPrice) / price) * 100;
     return Math.round(discount);
   };
 
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 15;
+  const productsPerPage = 20;
 
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -148,10 +157,10 @@ const ProductbyCategories: React.FC = () => {
         sortedProducts.sort((a, b) => b.price - a.price);
         break;
       case "nameAsc":
-        sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
+        sortedProducts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         break;
       case "nameDesc":
-        sortedProducts.sort((a, b) => b.name.localeCompare(a.name));
+        sortedProducts.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
         break;
       default:
         break;
@@ -160,9 +169,177 @@ const ProductbyCategories: React.FC = () => {
     setProducts(sortedProducts);
   };
 
-  useEffect(() => {
-    // console.log("0---", isSidebarOpen);
-  }, [isSidebarOpen]);
+  // Mock Active Filter data for the header (based on image_e8f7a4.png)
+  const MOCK_ACTIVE_FILTERS: { name: string; style: string }[] = [
+      // { name: "Price : $25.00 - $125.00", style: "bg-yellow-500 text-gray-800" },
+      // { name: "5 Star", style: "bg-yellow-500 text-gray-800" },
+      // { name: "In Stock", style: "bg-green-700 text-white" },
+  ];
+  const [activeFilters, setActiveFilters] = useState(MOCK_ACTIVE_FILTERS);
+
+  const handleClearAllFilters = () => {
+    setSelectedSubCategory([]);
+    setSelectedSubCategoryDetails([]);
+    setActiveFilters([]);
+    // You would also reset Price, Review, Brand states here
+  }
+  
+  // New function to render the clean product card (UPDATED FOR SMALLER SIZE)
+  const renderProductCard = (product: Product, item: CartItem | undefined, isInWishlist: boolean) => {
+    
+    // Determine the final price and discount percent
+    const isDiscounted = product.discountedPrice > 0 && product.price > product.discountedPrice;
+    const finalPrice = isDiscounted ? product.discountedPrice : product.price;
+    const discountPercent = product.discountPercentage > 0
+        ? product.discountPercentage
+        : isDiscounted
+        ? getDiscountPercent(product.price, product.discountedPrice)
+        : 0;
+
+    return (
+        <Link
+            href={`/homepage/products/${product.productId}`}
+            key={product.productId}
+            // Reduced padding to p-2 for slightly smaller card
+            className="p-2 bg-white rounded-xl border border-gray-100 hover:shadow-lg transition-shadow duration-300 group relative"
+        >
+            <div className="relative aspect-square w-full">
+                {/* Discount Badge */}
+                {discountPercent > 0 && (
+                    <div className="absolute top-0 left-0">
+                        {/* Smaller discount text */}
+                        <h1 className="text-xs px-2 py-0.5 bg-green-700 text-white font-semibold rounded-br-lg rounded-tl-xl">
+                            {discountPercent}% off
+                        </h1>
+                    </div>
+                )}
+                
+                {/* Product Image */}
+                <Image
+                    src={`${NEXT_PUBLIC_CLOUDINARY_URL}${product?.imageUrls[0]}` || "/placeholder.png"}
+                    alt={product.name || "Product image"}
+                    className="object-contain w-full h-full p-2"
+                    fill
+                    sizes="(max-width: 640px) 50vw, 20vw"
+                />
+
+                {/* Wishlist Button */}
+                <div className="absolute top-1 right-1 flex">
+                    <Button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (user) {
+                                toggleWishlist(product, isInWishlist);
+                                handleClick(product.productId);
+                            } else {
+                                setIsLoginModalOpen(true);
+                            }
+                        }}
+                        // Smaller heart button
+                        className={cn(
+                            "text-base p-1.5 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 transition-colors hover:bg-gray-50",
+                            isInWishlist ? "text-red-500" : "text-gray-400"
+                        )}
+                    >
+                        <GoHeartFill />
+                    </Button>
+                </div>
+            </div>
+
+            <div className="mt-2 flex flex-col gap-0.5">
+                {/* Category & Rating (Smaller text) */}
+                <div className="flex justify-between items-center text-xs">
+                    <span className="text-green-700 font-medium">
+                        {product.category?.name || "Fruits"}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                        <MdOutlineStar className="text-yellow-500 text-sm" />
+                        <span className="font-medium text-gray-800">
+                            {product?.rating?.toFixed(1) || "4.8"}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Name (Smaller text) */}
+                <h2 className="font-semibold text-base text-gray-800 truncate hover:text-green-700 transition">
+                    {capitalizeFirstLetter(product.name || "")}
+                </h2>
+                
+                {/* REMOVED: Weight/Gram text */}
+                {/* <p className="text-sm text-gray-500 mb-2">{productSize}</p> */}
+
+                {/* Price and Add Button (Smaller) */}
+                <div className="flex items-center justify-between mt-1">
+                    <div className="flex flex-col items-start gap-0.5">
+                        {/* Smaller price text */}
+                        <span className="text-lg font-semibold text-gray-800">
+                            Rs.{finalPrice.toFixed(0)}
+                        </span>
+                        {isDiscounted && (
+                            <span className="text-xs text-gray-400 line-through">
+                                Rs.{product.price.toFixed(0)}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Add/Quantity Control (Smaller) */}
+                    {item && item.quantities > 0 ? (
+                        <div className="flex items-center border border-green-700 rounded-lg">
+                            <Button
+                                className="p-1 w-7 h-7 bg-white text-green-700 hover:bg-green-50 rounded-r-none"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    decreaseCount(product.productId);
+                                }}
+                            >
+                                <RiSubtractFill className="text-sm" />
+                            </Button>
+                            <span className="w-7 text-center text-xs font-semibold text-green-700">
+                                {item.quantities}
+                            </span>
+                            <Button
+                                className="p-1 w-7 h-7 bg-white text-green-700 hover:bg-green-50 rounded-l-none"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    increaseCount(product);
+                                }}
+                                disabled={item.quantities >= (product?.stock || 1)}
+                            >
+                                <IoMdAdd className="text-sm" />
+                            </Button>
+                        </div>
+                    ) : (product?.stock ?? 0) > 0 ? (
+                        <Button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (user) {
+                                    addtoCartByown(product);
+                                } else {
+                                    setIsLoginModalOpen(true);
+                                }
+                            }}
+                            // Smaller "Add" button
+                            className="p-1.5 h-5 bg-green-700 hover:bg-green-800 text-white rounded-lg flex items-center gap-1 transition-colors"
+                        >
+                            {/* Smaller SVG icon */}
+                            <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 6h-2c0-2.206-1.794-4-4-4S8 3.794 8 6H6C3.794 6 2 7.794 2 10v10c0 2.206 1.794 4 4 4h12c2.206 0 4-1.794 4-4V10c0-2.206-1.794-4-4-4zM10 6c0-1.103.897-2 2-2s2 .897 2 2h-4zm10 14c0 1.103-.897 2-2 2H6c-1.103 0-2-.897-2-2V10c0-1.103.897-2 2-2h12c1.103 0 2 .897 2 2v10z"/></svg>
+                            <span className="text-xs font-semibold">Add</span>
+                        </Button>
+                    ) : (
+                        <Button disabled className="p-1 h-8 text-xs bg-gray-200 text-gray-500 rounded-lg">
+                            Out of Stock
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </Link>
+    );
+};
+
 
   return (
     <div className="sm:flex w-full relative mb-7">
@@ -190,536 +367,136 @@ const ProductbyCategories: React.FC = () => {
       </div>
       {/* Main Content */}
       <div className={`${isSidebarOpen ? " sm:pl-64 " : ""} w-full `}>
-        <div className={` flex-1 gap-2  px-2 md:px-6 pt-[15px]  w-full `}>
+        <div className={` flex-1 gap-2  px-2 md:px-6 pt-[15px]  w-full `}>
+          
+          {/* Sidebar Toggle Button (Only visible if sidebar is permanent, otherwise hide) */}
           <div className="relative w-full">
             <Button
               onClick={() => {
                 setIsSidebarOpen(!isSidebarOpen);
               }}
               className={cn(
-                ` mt-12  fixed  z-50  ${isSidebarOpen ? "-ml-24" : "-ml-4"} `
+                ` mt-12  fixed  z-50  ${isSidebarOpen ? "-ml-24" : "-ml-4"} `
               )}
               variant={"outline"}
             >
               {isSidebarOpen ? (
-                <MdOutlineMenuOpen className="  " />
+                <MdOutlineMenuOpen className="  " />
               ) : (
-                <RiMenuFold2Fill className="  " />
+                <RiMenuFold2Fill className="  " />
               )}
             </Button>
           </div>
 
-          <CategoriesBanner />
-
-          {/* Breadcrumb */}
-          <div className="flex flex-col text-lg font-semibold text-gray-800 mt-2 mb-4">
-            {selectedCategoryId && (
-              <div className="sm:flex justify-end mt-2 gap-2">
-                {/* Sort Dropdown */}
-                {selectedCategoryId && products && products.length > 0 && (
-                  <div className="flex text-black justify-end gap-2 mb-4">
-                    <Select value={sortOption} onValueChange={handleSortChange}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Sort By" />
+          {/* Header & Sort Bar (Matching image_e8f7a4.png look) */}
+          <div className="flex justify-between items-center mb-6 pt-4">
+              <div className="flex items-center gap-4">
+                  <p className="text-gray-600 text-sm">
+                      Showing 1-{products.length || 12} of {allProducts.length || 2560} results
+                  </p>
+              </div>
+              <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">Sort by :</span>
+                  <Select value={sortOption} onValueChange={handleSortChange}>
+                      <SelectTrigger className="w-[150px] border-gray-300">
+                          <SelectValue placeholder="Default Sorting" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectGroup>
-                          <SelectItem value="priceLowToHigh">
-                            Price: Low to High
-                          </SelectItem>
-                          <SelectItem value="priceHighToLow">
-                            Price: High to Low
-                          </SelectItem>
-                          <SelectItem value="nameAsc">Name: A to Z</SelectItem>
-                          <SelectItem value="nameDesc">Name: Z to A</SelectItem>
-                        </SelectGroup>
+                          <SelectGroup>
+                              <SelectItem value="priceLowToHigh">Price: Low to High</SelectItem>
+                              <SelectItem value="priceHighToLow">Price: High to Low</SelectItem>
+                              <SelectItem value="nameAsc">Name: A to Z</SelectItem>
+                          </SelectGroup>
                       </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                  </Select>
               </div>
-            )}
-            {/* {selectedCategoryId ? (
-            <h1 className="sm:text-lg text-sm font-semibold text-gray-800">
-              Total Products:{" "}
-              {products?.filter(
-                product => product.category === selectedCategoryId
-              ).length || 0}
-            </h1>
-          ) : null} */}
-            {selectedCategoryId && (
-              <div className="flex flex-wrap gap-2 pt-2">
-                {selectedSubCategoryDetails.map((cat, index) => (
+          </div>
+          
+          {/* Active Filter Chips (Matching image_e8f7a4.png look) */}
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+              <span className="text-gray-700 font-medium">Active Filter</span>
+              
+              {/* Subcategory Chips (Dynamically added from sidebar selection) */}
+              {selectedSubCategoryDetails.map((cat, index) => (
                   <div
-                    key={index}
-                    className={cn(
-                      buttonVariants({ variant: "outline" }),
-                      "flex items-center gap-1 cursor-pointer bg-blue-600 text-white hover:bg-primaryBlue hover:text-white"
-                    )}
+                      key={index}
+                      className="flex items-center gap-1 cursor-pointer bg-yellow-500 text-gray-800 px-3 py-1 rounded-md text-sm font-semibold"
                   >
-                    <p>{cat?.name}</p>
-                    <button onClick={() => removeSubCat(cat)}>
-                      <IoMdClose />
-                    </button>
+                      <p>{cat?.name}</p>
+                      <button onClick={() => removeSubCat(cat)} className="ml-1">
+                          <IoMdClose className="text-lg" />
+                      </button>
                   </div>
-                ))}
-              </div>
-            )}
+              ))}
+              
+              {/* Placeholder Chips (For Price, Rating, Stock, etc.) */}
+              {activeFilters.map((filter, index) => (
+                      <div
+                          key={index}
+                          className={`flex items-center gap-1 cursor-pointer px-3 py-1 rounded-md text-sm font-semibold ${filter.style}`}
+                      >
+                          {filter.name}
+                          {/* Close button for non-subcategory filters */}
+                          <button className="ml-1 text-white/80" onClick={() => setActiveFilters(prev => prev.filter((_, i) => i !== index))}>
+                              <IoMdClose className="text-lg" />
+                          </button>
+                      </div>
+              ))}
+
+              
+              {/* Clear All Button */}
+              {(selectedSubCategoryDetails.length > 0 || activeFilters.length > 0) && (
+                  <Button 
+                      variant="link" 
+                      className="text-green-700 hover:text-green-800 text-sm font-semibold p-0 h-auto ml-2"
+                      onClick={handleClearAllFilters}
+                  >
+                      Clear All
+                  </Button>
+              )}
           </div>
 
-          {/* Products */}
+          {/* Products Grid: Set to 4 columns per row for md screens and up */}
           {!!loading || isLoading || !isUpdated ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 ">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
               {Array.from({ length: 10 }).map((_, index) => (
                 <ProductCardLoading key={index} className=" w-full" />
               ))}
             </div>
           ) : selectedCategoryId || selectedSubCategory.length > 0 ? (
             products.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-4 gap-2">
+              // Changed grid to show 4 products per row for md screens and up
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                 {products.map((product, i) => {
                   const item = items.find(
                     (item: any) => item.productId === product.productId
                   );
-                  const isInWishlist = wishlistItems.find(
+                  const isInWishlist = wishlistItems.some(
                     (item: any) => item.productId === product.productId
                   );
-                  return (
-                    <Link
-                      href={`/homepage/products/${product.productId}`}
-                      key={i}
-                      className="sm:p-3 p-2 bg-gray-100 rounded-lg border hover:bg-[#0037c8]/15 "
-                    >
-                      <div className="relative">
-                        <div
-                          className="cursor-pointer relative"
-                          onClick={() => {
-                            router.push(
-                              `/homepage/products/${product.productId}`
-                            );
-                          }}
-                        >
-                          {((product.discountedPrice > 0 &&
-                            product.price > product.discountedPrice) ||
-                            product.discountPercentage > 0) && (
-                            <div className="absolute sm:-top-1 top-1 -left-1 sm:-left-4 z-10">
-                              <h1 className="text-xs px-2 py-1 bg-red-500 text-white font-semibold rounded-r-full text-start">
-                                {product.discountPercentage
-                                  ? `${product.discountPercentage}% OFF`
-                                  : `${calculateDiscountPercent(
-                                      product.price,
-                                      product.discountedPrice
-                                    )}% OFF`}
-                              </h1>
-                            </div>
-                          )}
-                          <div className="relative w-full h-48">
-                            <Image
-                              src={product.imageUrls[0] || "/product.png"}
-                              alt={product.name || "Product image"}
-                              className="object-cover w-full h-full rounded-md"
-                              fill
-                            />
-                          </div>
-                          <div className="absolute sm:top-2 top-0 sm:right-2 right-0 flex">
-                            {user ? (
-                              <Button
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  toggleWishlist(
-                                    product,
-                                    isInWishlist != undefined ? true : false
-                                  );
-                                  handleClick(product.productId);
-                                }}
-                                className={`text-xl text-gray-300 bg-white transition-all hover:text-primaryBlue hover:bg-white z-10 rounded-full h-[32px] px-2 ${
-                                  isInWishlist
-                                    ? "bg-white hover:bg-white hover:text-primaryBlue text-primaryBlue"
-                                    : null
-                                } ${
-                                  clickedId == product.productId
-                                    ? "bg-white hover:bg-white hover:text-primaryBlue text-white"
-                                    : ""
-                                }`}
-                              >
-                                <GoHeartFill className="" />
-                              </Button>
-                            ) : (
-                              <Button
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setIsLoginModalOpen(true);
-                                }}
-                                className={`text-xl text-gray-300 bg-white transition-all hover:text-primaryBlue hover:bg-white z-10 rounded-full h-[32px] px-2 `}
-                              >
-                                <GoHeartFill className="" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mt-3 flex flex-col gap-1 justify-between">
-                          <h2 className="mt-1 font-semibold text-primary-btn truncate hover:text-primaryBlue">
-                            {capitalizeFirstLetter(product.name)}
-                          </h2>
-                          <div className="flex items-baseline">
-                            <span className="price">
-                              Rs.
-                              {(
-                                product?.price -
-                                (product.discountPercentage
-                                  ? (product?.price *
-                                      (product?.discountPercentage ?? 0)) /
-                                    100
-                                  : product?.discountedPrice)
-                              ).toFixed(0)}
-                            </span>
-                            <div>
-                              {(product.discountedPrice ||
-                                product.discountPercentage > 0) && (
-                                <span className="text-xs sm:text-sm text-gray-500 line-through ml-1 sm:ml-2">
-                                  Rs.{(product?.price).toFixed(0)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* stocks and reward */}
-                      <div className="flex items-center justify-end ">
-                        {/* Stock Section */}
-                        {/* <div className="border border-gray-300 rounded-sm py-0.5 px-1.5 flex items-center gap-1">
-                          <p
-                            className={`text-sm font-medium ${
-                              filteredProduct?.stock || 0 > 0
-                                ? "text-blue-600 font-semibold"
-                                : "text-gray-400 font-semibold"
-                            }`}
-                          >
-                            {filteredProduct?.stock || 0}
-                          </p>
-                          <p className="text-gray-500">stocks</p>
-                        </div> */}
-                        {/* Rating Section */}
-                        <div className="flex items-center   px-1.5 gap-0.5">
-                          {product?.rating && product.rating > 0 ? (
-                            <span className="ml-1 text-sm text-gray-700 font-medium">
-                              {product?.rating?.toFixed(1) || 0}
-                            </span>
-                          ) : (
-                            <BsDash className="text-gray-400 text-xl" />
-                          )}
-
-                          <MdOutlineStar className="text-yellow-500 text-xl" />
-                        </div>
-                      </div>
-
-                      {/* add and remove the cart */}
-                      <div className="flex items-center  sm:mt-1 pb-1 sm:pb-2">
-                        <div className="ml-auto w-full flex   justify-center h-8 sm:h-10 ">
-                          {item && item?.quantities > 0 ? (
-                            <div className="flex  rounded-lg">
-                              <Button
-                                className="p-1 text-xs sm:text-sm border-r  rounded-lg rounded-r-none pl-2 sm:pl-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  w-12 "
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  decreaseCount(product.productId);
-                                }}
-                              >
-                                <RiSubtractFill />
-                              </Button>
-                              <span
-                                className={cn(
-                                  buttonVariants({
-                                    variant: "default",
-                                  }),
-                                  "px-1 sm:px-2  w-12 text-xs sm:text-base rounded-none border-none h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  flex items-center justify-center "
-                                )}
-                              >
-                                {item.quantities}
-                              </span>
-                              <Button
-                                className="p-1 text-xs sm:text-sm  rounded-lg rounded-l-none border-l pr-2 sm:pr-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  w-12 "
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  increaseCount(product);
-                                }}
-                                disabled={
-                                  item?.quantities >= (product?.stock || 1)
-                                }
-                              >
-                                <IoMdAdd />
-                              </Button>
-                            </div>
-                          ) : (product?.stock ?? 0) > 0 ? (
-                            user ? (
-                              <Button
-                                variant={"default"}
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  addtoCartByown(product);
-                                }}
-                                className="border rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                              >
-                                Add to cart
-                              </Button>
-                            ) : (
-                              <Button
-                                variant={"default"}
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setIsLoginModalOpen(true);
-                                }}
-                                className="border  rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                              >
-                                Add to cart
-                              </Button>
-                            )
-                          ) : (
-                            <Button
-                              variant={"default"}
-                              disabled
-                              className="border border-muted-foreground  rounded-lg h-10 px-4"
-                            >
-                              Out of Stock
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  );
+                  return renderProductCard(product, item, isInWishlist); // Use the new card renderer
                 })}
               </div>
             ) : (
-              <p className="mt-32 text-center">No products available.</p>
+              <p className="mt-32 text-center">No products available in this category/filter combination.</p>
             )
           ) : (
             <>
               <h1 className="header font-semibold underline mb-2">
                 All Products
               </h1>
-              {/* {!selectedCategoryId && (
-              <h1> Total Products: {allProducts.length}</h1>
-            )} */}
 
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {/* Changed grid to show 4 products per row for md screens and up */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                 {currentProducts.map((filteredProduct: any) => {
                   const item = items.find(
                     (item: any) => item.productId === filteredProduct.productId
                   );
-                  const isAddedInWishlist = wishlistItems.find(
+                  const isAddedInWishlist = wishlistItems.some(
                     (item: any) => item.productId === filteredProduct.productId
                   );
 
-                  return (
-                    <Link
-                      href={`/homepage/products/${filteredProduct.productId}`}
-                      key={filteredProduct.productId}
-                      className="sm:p-4 p-2 bg-white border rounded-lg hover:bg-[#0037c8]/15 cursor-pointer"
-                    >
-                      <div className="relative w-36">
-                        <div
-                          className="cursor-pointer"
-                          onClick={() =>
-                            router.push(
-                              `/homepage/products/${filteredProduct.productId}`
-                            )
-                          }
-                        >
-                          {((filteredProduct.discountedPrice > 0 &&
-                            filteredProduct.price >
-                              filteredProduct.discountedPrice) ||
-                            filteredProduct.discountPercentage > 0) && (
-                            <div className="absolute sm:-top-1 top-1 -left-1 sm:-left-4 z-10">
-                              <h1 className="text-xs px-2 py-1 bg-red-500 text-white font-semibold rounded-r-full text-start">
-                                {filteredProduct.discountPercentage
-                                  ? `${filteredProduct.discountPercentage}% OFF`
-                                  : `${calculateDiscountPercent(
-                                      filteredProduct.price,
-                                      filteredProduct.discountedPrice
-                                    )}% OFF`}
-                              </h1>
-                            </div>
-                          )}
-
-                          <div className="relative w-full aspect-square sm:h-[170px] h-auto">
-                            <Image
-                              src={
-                                filteredProduct.imageUrls[0] || "/product.png"
-                              }
-                              alt={filteredProduct.name || "Product image"}
-                              className="object-cover h-full rounded-md"
-                              fill
-                              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                            />
-                          </div>
-
-                          <div className="absolute sm:-top-2 sm:-right-2 -top-1 right-1 z-10">
-                            {user ? (
-                              <Button
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  toggleWishlist(
-                                    filteredProduct,
-                                    !!isAddedInWishlist
-                                  );
-                                }}
-                                className={`text-xl text-gray-400 z-10 bg-white w-8 h-8 rounded-full transition-all hover:text-[#0037c8] hover:bg-gray-50 border ${
-                                  isAddedInWishlist ? "text-[#0037c8]" : ""
-                                }`}
-                              >
-                                <GoHeartFill />
-                              </Button>
-                            ) : (
-                              <Button
-                                onClick={e => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setIsLoginModalOpen(true);
-                                }}
-                                className={`text-xl text-gray-400 z-10 bg-white w-8 h-8 rounded-full transition-all hover:text-[#0037c8] hover:bg-gray-50 border  ${
-                                  isAddedInWishlist ? "text-[#0037c8]" : ""
-                                }`}
-                              >
-                                <GoHeartFill />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mt-3 flex flex-col gap-1 justify-between">
-                          <h2 className="mt-1 font-serif text-primary-btn truncate">
-                            {capitalizeFirstLetter(filteredProduct.name)}
-                          </h2>
-                          <div className="flex items-baseline">
-                            <span className="price font-semibold text-primary-btn">
-                              Rs.
-                              {(
-                                filteredProduct.price -
-                                filteredProduct.discountedPrice
-                              ).toFixed(0)}
-                            </span>
-                            {filteredProduct.discountedPrice > 0 && (
-                              <span className="text-xs text-gray-500 line-through sm:ml-2 ml-1">
-                                Rs.{filteredProduct.price.toFixed(0)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      {/* stocks and reward */}
-                      <div className="flex items-center justify-end ">
-                        {/* Stock Section */}
-                        {/* <div className="border border-gray-300 rounded-sm py-0.5 px-1.5 flex items-center gap-1">
-                                    <p
-                                      className={`text-sm font-medium ${
-                                        filteredProduct?.stock || 0 > 0
-                                          ? "text-blue-600 font-semibold"
-                                          : "text-gray-400 font-semibold"
-                                      }`}
-                                    >
-                                      {filteredProduct?.stock || 0}
-                                    </p>
-                                    <p className="text-gray-500">stocks</p>
-                                  </div> */}
-                        {/* Rating Section */}
-                        <div className="flex items-center  py-0.5 px-1.5 gap-0.5">
-                          {filteredProduct?.rating &&
-                          filteredProduct.rating > 0 ? (
-                            <span className="ml-1 text-sm text-gray-700 font-medium">
-                              {filteredProduct?.rating?.toFixed(1) || 0}
-                            </span>
-                          ) : (
-                            <BsDash className="text-gray-400 text-xl" />
-                          )}
-
-                          <MdOutlineStar className="text-yellow-500 text-xl" />
-                        </div>
-                      </div>
-                      {/* add and remove the Cart */}
-                      <div className="flex items-center justify-center sm:mt-1 w-full">
-                        <div className="w-full flex justify-end h-10">
-                          <div className="ml-auto w-full flex justify-center h-8 sm:h-10">
-                            {item && item.quantities > 0 ? (
-                              <div className="flex  border-muted-foreground rounded-full">
-                                <Button
-                                  className="p-1 text-xs sm:text-sm border-r rounded-lg rounded-r-none pl-2 sm:pl-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80 w-12"
-                                  onClick={e => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    decreaseCount(filteredProduct.productId);
-                                  }}
-                                >
-                                  <RiSubtractFill className="text-lg" />
-                                </Button>
-                                <span
-                                  className={cn(
-                                    buttonVariants({ variant: "default" }),
-                                    "px-3 sm:px-2  w-12 text-xs sm:text-base rounded-none border-none h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  flex items-center justify-center  "
-                                  )}
-                                >
-                                  {item.quantities}
-                                </span>
-                                <Button
-                                  className="p-1 text-xs sm:text-sm rounded-lg rounded-l-none border-l pr-2 sm:pr-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  w-10 "
-                                  onClick={e => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    increaseCount(filteredProduct);
-                                  }}
-                                  disabled={
-                                    item.quantities >=
-                                    (filteredProduct.stock || 1)
-                                  }
-                                >
-                                  <IoMdAdd className="text-lg" />
-                                </Button>
-                              </div>
-                            ) : filteredProduct?.stock > 0 ? (
-                              user ? (
-                                <Button
-                                  onClick={e => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    addtoCartByown(filteredProduct);
-                                  }}
-                                  className="border rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base bg-[#0037c8] hover:bg-[#0037c8]/80  w-full"
-                                >
-                                  Add to Cart
-                                </Button>
-                              ) : (
-                                <Button
-                                  onClick={e => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsLoginModalOpen(true);
-                                  }}
-                                  className="border rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base bg-[#0037c8] hover:bg-[#0037c8]/80  w-full"
-                                >
-                                  Add to Cart
-                                </Button>
-                              )
-                            ) : (
-                              <Button
-                                disabled
-                                className="border border-muted-foreground rounded-full h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm w-full"
-                              >
-                                Out of Stock
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
+                  return renderProductCard(filteredProduct, item, isAddedInWishlist); // Use the new card renderer
                 })}
               </div>
 
