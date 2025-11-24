@@ -37,11 +37,11 @@ const Header = () => {
     if (user) {
       axiosAuthInstance()
         .get("/api/auth/profile")
-        .then(res => {
+        .then((res) => {
           setUserDetails(res.data);
           setLoading(false);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("error fetching profile", err);
           setLoading(false);
         });
@@ -60,11 +60,11 @@ const Header = () => {
             onClick={handleHomeClick}
           >
             <Image
-              src="/etech-logo.jpg"
+              src="/newlogo.png"
               alt="ETECH Logo"
               height={400}
               width={400}
-              className={`sm:h-12 h-8 w-32 sm:w-44 rounded-lg ${
+              className={`sm:h-16 h-8 w-32 sm:w-40 rounded-lg ${
                 isSearchVisible ? "hidden" : ""
               }`}
             />
@@ -81,16 +81,14 @@ const Header = () => {
               <UsedSearchBar />
             </div>
 
-           
-
             {/* Action Icons */}
             <div className="flex items-center space-x-3">
-               <div className="flex-grow md:hidden block">
-              <SmallScreenSearchBar
-                isSearchVisible={isSearchVisible}
-                setIsSearchVisible={setIsSearchVisible}
-              />
-            </div>
+              <div className="flex-grow md:hidden block">
+                <SmallScreenSearchBar
+                  isSearchVisible={isSearchVisible}
+                  setIsSearchVisible={setIsSearchVisible}
+                />
+              </div>
               <div className="flex space-x-3">
                 <div className={`mt-1 ${isSearchVisible ? "hidden" : ""}`}>
                   <FavoriteModal />

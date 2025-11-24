@@ -39,10 +39,10 @@ const Header: React.FC<HeaderProps> = ({ toggleMenu }) => {
     if (user) {
       axiosAuthInstance()
         .get("/api/auth/profile")
-        .then(res => {
+        .then((res) => {
           setUserDetails(res.data);
         })
-        .catch(err => console.error("error fetching profile", err));
+        .catch((err) => console.error("error fetching profile", err));
     }
   }, []);
 
@@ -83,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ toggleMenu }) => {
           onClick={() => router.push("/homepage")}
         >
           <Image
-            src="/etech-logo.jpg"
+            src="/newlogo.png"
             alt="logo"
             className="sm:h-14 h-8 w-20 sm:w-44"
           />

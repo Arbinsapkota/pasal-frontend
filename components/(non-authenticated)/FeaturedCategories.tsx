@@ -63,7 +63,7 @@ const FeaturedCategories = () => {
   const firstSix = categories.slice(0, 6);
 
   return (
-    <section className="py-14 bg-gradient-to-b from-white to-gray-50">
+    <section className="py-14 ">
       <div className="text-center mb-10">
         <p className="text-sm text-gray-500 tracking-wide">Shop by Category</p>
         <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
@@ -73,17 +73,19 @@ const FeaturedCategories = () => {
 
       <div className="mt-8">
         {categories.length > 6 ? (
-          // 🔥 More than 6 = Premium Carousel
           <Slider {...carouselSettings}>
             {categories.map((cat, index) => (
               <div key={cat.id || index} className="px-3">
-                <div className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                  <div className="w-24 h-24 mx-auto rounded-xl bg-gray-50 shadow-inner flex items-center justify-center overflow-hidden">
+                <div className=" p-4   transition-all duration-300 hover:-translate-y-1">
+                  <div className="w-24 h-24 mx-auto bg-gray-50 shadow-inner flex items-center justify-center overflow-hidden rounded-full">
                     <Image
-                      src={`${NEXT_PUBLIC_CLOUDINARY_URL}${cat.categoryImageUrl}` || "/placeholder.png"}
+                      src={
+                        `${NEXT_PUBLIC_CLOUDINARY_URL}${cat.categoryImageUrl}` ||
+                        "/placeholder.png"
+                      }
                       alt={cat.name}
-                      width={80}
-                      height={80}
+                      width={500}
+                      height={500}
                       className="object-contain transition-transform duration-300 hover:scale-110"
                     />
                   </div>
@@ -104,7 +106,10 @@ const FeaturedCategories = () => {
               >
                 <div className="w-24 h-24 mx-auto rounded-xl bg-gray-50 shadow-inner flex items-center justify-center overflow-hidden">
                   <Image
-                    src={`${NEXT_PUBLIC_CLOUDINARY_URL}${cat.categoryImageUrl}` || "/placeholder.png"}
+                    src={
+                      `${NEXT_PUBLIC_CLOUDINARY_URL}${cat.categoryImageUrl}` ||
+                      "/placeholder.png"
+                    }
                     alt={cat.name}
                     width={80}
                     height={80}

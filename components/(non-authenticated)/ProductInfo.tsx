@@ -43,6 +43,7 @@ import LoadingContent from "./LoadingContent";
 import ShowReview from "./Review-Rating-modal/ShowReviws";
 import { BsDash } from "react-icons/bs";
 import { MdOutlineStar } from "react-icons/md";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
 // import TextEditorReadOnly from "./textEditor/TextEditorReadOnly";
 const TextEditorReadOnly = dynamic(
   () => import("./textEditor/TextEditorReadOnly"),
@@ -69,11 +70,11 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
           productId,
         },
       })
-      .then(res => {
+      .then((res) => {
         setProduct(res.data);
         setIsLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Error fetching product", err);
         setIsLoading(false);
       });
@@ -98,10 +99,10 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
   const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
 
   const isAddedInWishlist = wishlistItems.find(
-    item => item.productId == product?.productId
+    (item) => item.productId == product?.productId
   );
 
-  const item = items.find(item => item.productId === product?.productId);
+  const item = items.find((item) => item.productId === product?.productId);
 
   const user = getUserFromCookies();
   const [allItems, setAllItems] = useState<CartItem[]>(items);
@@ -121,11 +122,11 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
               product.subcategory || "03c6c530-3427-433e-8ff8-06ccb7433e06",
           },
         })
-        .then(res => {
+        .then((res) => {
           setProducts(res.data);
           setIsRecLoading(false);
         })
-        .catch(err => {
+        .catch((err) => {
           console.log("Error fetching products", err);
           setIsRecLoading(false);
         });
@@ -138,10 +139,10 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
     if (user) {
       axiosAuthInstance()
         .get("/api/cart/")
-        .then(res => {
+        .then((res) => {
           setCartData(res.data);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error fetching Cart Items", err);
         });
     }
@@ -156,7 +157,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
   const countApi = useCallback(
     useDebouncedCallback((product: any, quantity: number) => {
       const existingItem = cartData.find(
-        item => item.productId === product.productId
+        (item) => item.productId === product.productId
       );
 
       if (existingItem && existingItem.itemId) {
@@ -168,7 +169,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
           .then(() => {
             // fetchCartData(); // Refresh cart after update
           })
-          .catch(err => {
+          .catch((err) => {
             toast.error("Failed to update cart");
             console.error(err);
           });
@@ -187,7 +188,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
       .then(() => {
         fetchCartData(); // Refresh cart after adding
       })
-      .catch(err => {
+      .catch((err) => {
         toast.error("Failed to add to cart");
         console.error(err);
       });
@@ -196,7 +197,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
   const addtoCartByown = (product: Product) => {
     // Check if the product already exists in allItems
     const existingItem = allItems.find(
-      item => item.productId === product.productId
+      (item) => item.productId === product.productId
     );
 
     const itemPrice = product.price;
@@ -204,7 +205,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
     let updatedItems;
     if (existingItem) {
       // If the product exists, increase quantity and update the total price
-      updatedItems = allItems.map(item =>
+      updatedItems = allItems.map((item) =>
         item.productId === product.productId
           ? {
               ...item,
@@ -245,7 +246,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
   const increaseCount = (product: Product) => {
     // Check if the product already exists in allItems
     const existingItem = allItems.find(
-      item => item.productId === product.productId
+      (item) => item.productId === product.productId
     );
 
     const itemPrice = product.price;
@@ -253,7 +254,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
     let updatedItems;
     if (existingItem) {
       // If the product exists, increase quantity and update the total price
-      updatedItems = allItems.map(item =>
+      updatedItems = allItems.map((item) =>
         item.productId === product.productId
           ? {
               ...item,
@@ -312,25 +313,25 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
   );
 
   const decreaseCount = (productId: string) => {
-    const existingItem = allItems.find(item => item.productId === productId);
+    const existingItem = allItems.find((item) => item.productId === productId);
 
     if (existingItem) {
       if (existingItem.quantities === 1) {
         // Remove the item completely if quantity is 1
-        setAllItems(allItems.filter(item => item.productId !== productId));
+        setAllItems(allItems.filter((item) => item.productId !== productId));
         dispatch(removeFromCart(productId));
 
         // Call API to completely remove item
         if (user) {
           axiosAuthInstance()
             .delete(`/api/cart/remove?productId=${existingItem.productId}`)
-            .catch(err => {
+            .catch((err) => {
               // toast.error("Failed to Remove Item from Cart");
             });
         }
       } else {
         // Decrease quantity and update total price
-        const updatedItems = allItems.map(item =>
+        const updatedItems = allItems.map((item) =>
           item.productId === productId
             ? {
                 ...item,
@@ -488,7 +489,10 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
 
                 <Card className="relative inline-flex h-auto  rounded  md:w-[70%] w-[200px]  items-center justify-start">
                   <Image
-                    src={product.imageUrls[currentImageIndex] || "/product.png"}
+                    src={
+                      `${NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[currentImageIndex]}` ||
+                      "/product.png"
+                    }
                     alt={`${product.name}-${currentImageIndex}` || "pic"}
                     className=" h-40 md:h-96 w-full object-cover"
                     height={800}
@@ -617,7 +621,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                       {user ? (
                         <Button
                           variant={"outline"}
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
                             // addToFavorite(product);
                             toggleWishlist(
@@ -643,7 +647,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                       ) : (
                         <Button
                           variant={"outline"}
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
                             setIsLoginModalOpen(true);
                           }}
@@ -696,7 +700,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                       <div className="relative group">
                         <Card className="p-4 mt-4 w-max ">
                           <Image
-                            src={product?.labelImgUrl}
+                            src={`${NEXT_PUBLIC_CLOUDINARY_URL}${product?.labelImgUrl}`}
                             alt="Label"
                             width={1000}
                             height={1000}
@@ -742,10 +746,10 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                 ) : products ? (
                   products.map((product, index) => {
                     const item = items.find(
-                      item => item.productId == product.productId
+                      (item) => item.productId == product.productId
                     );
                     const isAddedInWishlist = wishlistItems.find(
-                      item => item.productId == product.productId
+                      (item) => item.productId == product.productId
                     );
 
                     return (
@@ -779,7 +783,10 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                               )}
                               <div className="relative w-full h-48">
                                 <Image
-                                  src={product.imageUrls[0] || "/product.png"}
+                                  src={
+                                    `${NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}` ||
+                                    "/product.png"
+                                  }
                                   alt={product.name || "Product image"}
                                   className="object-cover w-full h-full rounded-md"
                                   fill
@@ -789,7 +796,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                             <div className="absolute top-1 right-1 sm:-top-1 sm:-right-1 z-10">
                               {user ? (
                                 <Button
-                                  onClick={e => {
+                                  onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     toggleWishlist(
@@ -808,7 +815,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                                 </Button>
                               ) : (
                                 <Button
-                                  onClick={e => {
+                                  onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     setIsLoginModalOpen(true);
@@ -882,7 +889,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                                 <div className="flex  rounded-full">
                                   <Button
                                     className="p-1 text-xs sm:text-sm border-r  rounded-lg rounded-r-none pl-2 sm:pl-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                    onClick={e => {
+                                    onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       decreaseCount(product.productId);
@@ -902,7 +909,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                                   </span>
                                   <Button
                                     className="p-1 text-xs sm:text-sm  rounded-lg rounded-l-none border-l pr-2 sm:pr-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                    onClick={e => {
+                                    onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       increaseCount(product);
@@ -918,7 +925,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                                 user ? (
                                   <Button
                                     variant={"default"}
-                                    onClick={e => {
+                                    onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       addtoCartByown(product);
@@ -930,7 +937,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                                 ) : (
                                   <Button
                                     variant={"default"}
-                                    onClick={e => {
+                                    onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       setIsLoginModalOpen(true);
