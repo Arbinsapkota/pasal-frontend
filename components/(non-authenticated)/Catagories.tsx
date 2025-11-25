@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Carousel,
   CarouselContent,
@@ -37,6 +39,7 @@ import { Button, buttonVariants } from "../ui/button";
 import { MdOutlineStar } from "react-icons/md";
 import { BsDash } from "react-icons/bs";
 import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
+import { PiBagFill } from "react-icons/pi";
 
 const Categories = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -48,6 +51,7 @@ const Categories = () => {
   const user = getUserFromCookies();
   const [allItems, setAllItems] = useState<CartItem[]>(items);
   const { setIsLoginModalOpen } = useModal();
+
   useEffect(() => {
     // Fetch categories
     axios
@@ -106,11 +110,7 @@ const Categories = () => {
             itemId: existingItem.itemId,
             quantity,
           })
-          .then(() => {
-            // if (!existingItem?.itemId ) {
-            //   fetchCartData(); // Refresh cart after update
-            // }
-          })
+          .then(() => {})
           .catch((err) => {
             toast.error("Failed to update cart");
             console.error(err);
@@ -137,7 +137,6 @@ const Categories = () => {
   }, []);
 
   const addtoCartByown = (product: Product) => {
-    // Check if the product already exists in allItems
     const existingItem = allItems.find(
       (item) => item.productId === product.productId
     );
@@ -146,7 +145,6 @@ const Categories = () => {
 
     let updatedItems;
     if (existingItem) {
-      // If the product exists, increase quantity and update the total price
       updatedItems = allItems.map((item) =>
         item.productId === product.productId
           ? {
@@ -157,7 +155,6 @@ const Categories = () => {
           : item
       );
     } else {
-      // If the product does not exist, add it to allItems
       updatedItems = [
         ...allItems,
         {
@@ -173,20 +170,16 @@ const Categories = () => {
         },
       ];
     }
-    // Update local state
-    setAllItems(updatedItems);
 
-    // Update Redux
+    setAllItems(updatedItems);
     dispatch(addToCart(product));
 
-    // Trigger API call if user is logged in
     if (user) {
       addToCartByApi(product, existingItem ? existingItem.quantities + 1 : 1);
     }
   };
 
   const increaseCount = (product: Product) => {
-    // Check if the product already exists in allItems
     const existingItem = allItems.find(
       (item) => item.productId === product.productId
     );
@@ -195,7 +188,6 @@ const Categories = () => {
 
     let updatedItems;
     if (existingItem) {
-      // If the product exists, increase quantity and update the total price
       updatedItems = allItems.map((item) =>
         item.productId === product.productId
           ? {
@@ -206,7 +198,6 @@ const Categories = () => {
           : item
       );
     } else {
-      // If the product does not exist, add it to allItems
       updatedItems = [
         ...allItems,
         {
@@ -222,17 +213,15 @@ const Categories = () => {
         },
       ];
     }
-    // Update local state
-    setAllItems(updatedItems);
 
-    // Update Redux
+    setAllItems(updatedItems);
     dispatch(addToCart(product));
 
-    // Trigger API call if user is logged in
     if (user) {
       countApi(product, existingItem ? existingItem.quantities + 1 : 1);
     }
   };
+
   const wishlistApi = useDebouncedCallback(
     (product: Product, action: "add" | "remove") => {
       const endpoint = action === "add" ? "/api/wishlist/" : "/api/wishlist/";
@@ -266,7 +255,7 @@ const Categories = () => {
     discountedPrice: number
   ): number => {
     if (!discountedPrice || price <= 0) return 0;
-    const discount = (discountedPrice / price) * 100;
+    const discount = ((price - discountedPrice) / price) * 100;
     return Math.round(discount);
   };
 
@@ -275,20 +264,15 @@ const Categories = () => {
 
     if (existingItem) {
       if (existingItem.quantities === 1) {
-        // Remove the item completely if quantity is 1
         setAllItems(allItems.filter((item) => item.productId !== productId));
         dispatch(removeFromCart(productId));
 
-        // Call API to completely remove item
         if (user) {
           axiosAuthInstance()
             .delete(`/api/cart/remove?productId=${existingItem.productId}`)
-            .catch((err) => {
-              // toast.error("Failed to Remove Item from Cart");
-            });
+            .catch((err) => {});
         }
       } else {
-        // Decrease quantity and update total price
         const updatedItems = allItems.map((item) =>
           item.productId === productId
             ? {
@@ -302,22 +286,20 @@ const Categories = () => {
         setAllItems(updatedItems);
         dispatch(removeFromCart(productId));
 
-        // Update backend with new quantity
         if (user) {
-          // Correctly pass the Product object
           countApi(
             {
               productId: existingItem.productId,
               name: existingItem.names,
-              description: "", // Add description if available
+              description: "",
               price: existingItem.prices,
-              discountedPrice: 0, // Add discounted price if applicable
+              discountedPrice: 0,
               imageUrls: existingItem.imageUrls || [],
-              rating: null, // Add rating if available
+              rating: null,
               wishlistId: existingItem.wishlistId || null,
               cartId: existingItem.cartId,
             },
-            existingItem.quantities - 1 // Updated quantity
+            existingItem.quantities - 1
           );
         }
       }
@@ -326,13 +308,11 @@ const Categories = () => {
 
   const toggleWishlist = (product: Product, isAdded: boolean) => {
     if (isAdded) {
-      // Remove from Wishlist
       dispatch(removeFromWishlist(product.productId));
       if (user) {
         wishlistApi(product, "remove");
       }
     } else {
-      // Add to Wishlist
       dispatch(addToWishlist(product));
       if (user) {
         wishlistApi(product, "add");
@@ -342,17 +322,206 @@ const Categories = () => {
 
   const router = useRouter();
 
-  return (
-    <div className="p-4 md:p-6 rounded-lg  mx-auto w-full ">
-      {isLoading ? (
-        <div className="flex overflow-x-auto gap-3 sm:gap-5 w-full pb-2 flex-shrink-0 scrollbar-hide">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="min-w-[160px] sm:min-w-[220px] md:min-w-[230px] flex-shrink-0"
-            >
-              <ProductCardLoading />
+  // Refined Product Card Component
+  const ProductCard = ({
+    product,
+    item,
+    isInWishlist,
+  }: {
+    product: Product;
+    item: CartItem | undefined;
+    isInWishlist: boolean;
+  }) => {
+    const isDiscounted =
+      product.discountedPrice > 0 && product.price > product.discountedPrice;
+    const finalPrice = isDiscounted ? product.discountedPrice : product.price;
+    const discountPercent =
+      product.discountPercentage > 0
+        ? product.discountPercentage
+        : isDiscounted
+        ? calculateDiscountPercent(product.price, product.discountedPrice)
+        : 0;
+
+    return (
+      <Link
+        href={`/homepage/products/${product.productId}`}
+        className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 block border border-gray-100 hover:border-orange-100"
+      >
+        {/* IMAGE CONTAINER */}
+        <div className="relative w-full aspect-[4/5] overflow-hidden bg-gray-50">
+          <Image
+            src={
+              `${NEXT_PUBLIC_CLOUDINARY_URL}${product?.imageUrls?.[0]}` ||
+              "/product.png"
+            }
+            alt={product.name || "Product image"}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
+
+          {/* DISCOUNT BADGE */}
+          {discountPercent > 0 && (
+            <div className="absolute top-3 left-3">
+              <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg">
+                {discountPercent}% OFF
+              </span>
             </div>
+          )}
+
+          {/* WISHLIST BUTTON */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (user) {
+                toggleWishlist(product, isInWishlist);
+                handleClick(product.productId);
+              } else {
+                setIsLoginModalOpen(true);
+              }
+            }}
+            className={`absolute top-3 right-3 p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${
+              isInWishlist
+                ? "bg-red-500 text-white"
+                : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500"
+            }`}
+          >
+            <GoHeartFill className="text-lg" />
+          </button>
+
+          {/* QUICK ADD OVERLAY */}
+          {!item?.quantities && (product?.stock ?? 0) > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (user) {
+                    addtoCartByown(product);
+                  } else {
+                    setIsLoginModalOpen(true);
+                  }
+                }}
+                className="w-full bg-white text-orange-600 font-semibold py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-orange-50 transition-colors"
+              >
+                <PiBagFill className="text-lg" />
+                Quick Add
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* CONTENT */}
+        <div className="p-4">
+          {/* CATEGORY & RATING */}
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-orange-600 font-medium text-sm">
+              {product.category?.name || "Category"}
+            </span>
+            <div className="flex items-center gap-1">
+              <MdOutlineStar className="text-yellow-500 text-base" />
+              <span className="font-medium text-gray-800 text-sm">
+                {product?.rating?.toFixed(1) || "4.8"}
+              </span>
+            </div>
+          </div>
+
+          {/* PRODUCT NAME */}
+          <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight group-hover:text-orange-700 transition-colors mb-2">
+            {product.name}
+          </h3>
+
+          {/* PRICE SECTION */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg font-bold text-gray-900">
+              Rs.{finalPrice.toFixed(0)}
+            </span>
+            {isDiscounted && (
+              <span className="text-sm text-gray-500 line-through">
+                Rs.{product.price.toFixed(0)}
+              </span>
+            )}
+          </div>
+
+          {/* ADD TO CART / QUANTITY CONTROLS */}
+          {item && item.quantities > 0 ? (
+            <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  decreaseCount(product.productId);
+                }}
+                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
+              >
+                <RiSubtractFill className="text-lg" />
+              </button>
+
+              <span className="font-bold text-orange-700 min-w-[20px] text-center">
+                {item.quantities}
+              </span>
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  increaseCount(product);
+                }}
+                disabled={item.quantities >= (product?.stock || 1)}
+                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors disabled:opacity-50"
+              >
+                <IoMdAdd className="text-lg" />
+              </button>
+            </div>
+          ) : (product?.stock ?? 0) > 0 ? (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (user) {
+                  addtoCartByown(product);
+                } else {
+                  setIsLoginModalOpen(true);
+                }
+              }}
+              className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold py-3 rounded-xl flex justify-center items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              <PiBagFill className="text-lg" />
+              Add to Cart
+            </button>
+          ) : (
+            <button
+              disabled
+              className="w-full bg-gray-200 text-gray-500 font-semibold py-3 rounded-xl flex justify-center items-center gap-2 transition-all duration-200"
+            >
+              Out of Stock
+            </button>
+          )}
+        </div>
+      </Link>
+    );
+  };
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+      {/* HEADER */}
+      <div className="text-center mb-16">
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
+          Shop by{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">
+            Categories
+          </span>
+        </h2>
+        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+          Discover amazing products organized by your favorite categories
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <ProductCardLoading key={index} />
           ))}
         </div>
       ) : (
@@ -364,271 +533,94 @@ const Categories = () => {
               ).length >= 5
           )
           .map((category, index) => (
-            <div key={index} className="w-full">
-              {/* Category header */}
-              <div className="flex justify-between gap-4 mb-2 pb-1 mt-5">
-                <h2 className="text-2xl font-semibold text-gray-800">
-                  {category.name}
-                </h2>
+            <div key={category.categoryId} className="mb-16 last:mb-0">
+              {/* CATEGORY HEADER */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                    {category.name}
+                  </h3>
+                  <p className="text-gray-600 mt-1">
+                    {
+                      products.filter((p) => p.category === category.categoryId)
+                        .length
+                    }{" "}
+                    products available
+                  </p>
+                </div>
+
                 <Button
                   onClick={() =>
                     router.push(
                       `/homepage/products?category=${category.categoryId}`
                     )
                   }
-                  variant="link"
-                  className="w-auto py-2 px-2 rounded-md text-lg hover:bg-white flex gap-1 hover:text-primary"
+                  className="bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-xl px-6 py-3 flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200"
                 >
-                  <span>Shop more</span>
-                  <IoChevronForwardSharp className="mt-[2.1px]" />
+                  <span>View All</span>
+                  <IoChevronForwardSharp className="text-lg" />
                 </Button>
               </div>
 
-              {/* Carousel */}
-              <div key={category.categoryId} className=" ">
-                <Carousel>
-                  <CarouselContent className="sm:pl-6 pl-3 pb-2">
+              {/* PRODUCTS CAROUSEL */}
+              <div className="relative">
+                <Carousel className="w-full">
+                  <CarouselContent className="-ml-2 md:-ml-4">
                     {products
                       .filter((p) => p.category === category.categoryId)
-                      .map((filteredProduct, index) => {
+                      .map((filteredProduct) => {
                         const item = items.find(
                           (item) => item.productId === filteredProduct.productId
                         );
-                        const isAddedInWishlist = wishlistItems.find(
-                          (item) => item.productId == filteredProduct.productId
+                        const isInWishlist = wishlistItems.some(
+                          (item) => item.productId === filteredProduct.productId
                         );
 
                         return (
                           <CarouselItem
-                            key={index}
-                            className="basis-1/2 sm:basis-1/3 md:basis-1/3 lg:basis-1/4 xl:basis-1/5 pl-2 "
+                            key={filteredProduct.productId}
+                            className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5"
                           >
-                            <Link
-                              href={`/homepage/products/${filteredProduct.productId}`}
-                            >
-                              <div className="p-1 sm:p-2 md:p-3 rounded-lg hover:bg-[#0037c8]/15 transition-shadow group shadow-md border sm:w-[230px] w-auto">
-                                <div className="relative w-full">
-                                  <div className="cursor-pointer">
-                                    {((filteredProduct.discountedPrice > 0 &&
-                                      filteredProduct.price >
-                                        filteredProduct.discountedPrice) ||
-                                      filteredProduct.discountPercentage >
-                                        0) && (
-                                      <div className="absolute sm:-top-1 top-1 -left-1 sm:-left-3 z-10">
-                                        <h1 className="text-xs px-2 py-1 bg-red-500 text-white font-semibold rounded-r-full text-start">
-                                          {filteredProduct.discountPercentage
-                                            ? `${filteredProduct.discountPercentage}% OFF`
-                                            : `${calculateDiscountPercent(
-                                                filteredProduct.price,
-                                                filteredProduct.discountedPrice
-                                              )}% OFF`}
-                                        </h1>
-                                      </div>
-                                    )}
-                                    <div className="relative w-full aspect-square sm:h-[170px] h-auto">
-                                      <Image
-                                        src={
-                                          `${NEXT_PUBLIC_CLOUDINARY_URL}${filteredProduct?.imageUrls?.[0]}` ||
-                                          "/product.png"
-                                        }
-                                        alt={
-                                          filteredProduct.name ||
-                                          "Product image"
-                                        }
-                                        className="object-cover w-full h-full rounded-md "
-                                        fill
-                                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                      />
-                                    </div>
-                                    <div className="absolute top-1 right-1 sm:-top-1 sm:-right-1 z-10">
-                                      {user ? (
-                                        <Button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            toggleWishlist(
-                                              filteredProduct,
-                                              isAddedInWishlist != undefined
-                                            );
-                                            handleClick(
-                                              filteredProduct.productId
-                                            );
-                                          }}
-                                          className={`text-sm sm:text-xl  z-10 bg-white pt-0 h-6 sm:h-8 p-1 sm:p-2 rounded-full border transition-all  text-white hover:bg-gray-200 ${
-                                            isAddedInWishlist
-                                              ? "text-[#0037c8]"
-                                              : "text-gray-400"
-                                          }`}
-                                        >
-                                          <GoHeartFill />
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setIsLoginModalOpen(true);
-                                          }}
-                                          className={`text-sm sm:text-xl  z-10 bg-white pt-0 h-6 sm:h-8 p-1 sm:p-2 rounded-full border transition-all   hover:text-[#0037c8] hover:bg-gray-200 text-gray-400 `}
-                                        >
-                                          <GoHeartFill />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="mt-3 flex flex-col gap-1 justify-between">
-                                    <h2 className="mt-1 text-xs sm:text-sm md:text-base  text-primary-btn truncate font-semibold ">
-                                      {filteredProduct.name}
-                                    </h2>
-                                    <div className="flex items-baseline">
-                                      <span className="price ">
-                                        Rs.
-                                        {(
-                                          filteredProduct?.price -
-                                          (filteredProduct.discountPercentage
-                                            ? (filteredProduct?.price *
-                                                (filteredProduct?.discountPercentage ??
-                                                  0)) /
-                                              100
-                                            : filteredProduct?.discountedPrice)
-                                        ).toFixed(0)}
-                                      </span>
-                                      {(filteredProduct.discountedPrice > 0 ||
-                                        filteredProduct.discountPercentage >
-                                          0) && (
-                                        <span className="text-xs sm:text-sm text-gray-500 line-through ml-1 sm:ml-2">
-                                          Rs.
-                                          {(filteredProduct?.price).toFixed(0)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center justify-end ">
-                                  {/* Stock Section */}
-                                  {/* <div className="border border-gray-300 rounded-sm py-0.5 px-1.5 flex items-center gap-1">
-                                    <p
-                                      className={`text-sm font-medium ${
-                                        filteredProduct?.stock || 0 > 0
-                                          ? "text-blue-600 font-semibold"
-                                          : "text-gray-400 font-semibold"
-                                      }`}
-                                    >
-                                      {filteredProduct?.stock || 0}
-                                    </p>
-                                    <p className="text-gray-500">stocks</p>
-                                  </div> */}
-                                  {/* Rating Section */}
-                                  <div className="flex items-center  py-0.5 px-1.5 gap-0.5">
-                                    {filteredProduct?.rating &&
-                                    filteredProduct.rating > 0 ? (
-                                      <span className="ml-1 text-sm text-gray-700 font-medium">
-                                        {filteredProduct?.rating?.toFixed(1) ||
-                                          0}
-                                      </span>
-                                    ) : (
-                                      <BsDash className="text-gray-400 text-xl" />
-                                    )}
-
-                                    <MdOutlineStar className="text-yellow-500 text-xl" />
-                                  </div>
-                                </div>
-
-                                {/* Add to cart section */}
-                                <div className="flex items-center sm:mt-1 pb-1 sm:pb-2">
-                                  <div className="ml-auto w-full flex   justify-center h-8 sm:h-10 ">
-                                    {item && item?.quantities > 0 ? (
-                                      <div className="flex  rounded-full">
-                                        <Button
-                                          className="p-1 text-xs sm:text-sm border-r  rounded-lg rounded-r-none pl-2 sm:pl-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            decreaseCount(
-                                              filteredProduct.productId
-                                            );
-                                          }}
-                                        >
-                                          <RiSubtractFill className="w-6 h-6 sm:w-4 sm:h-4 text-white" />
-                                        </Button>
-                                        <span
-                                          className={cn(
-                                            buttonVariants({
-                                              variant: "default",
-                                            }),
-                                            "px-1 sm:px-2 w-10 sm:w-16 text-xs sm:text-base rounded-none border-none h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  flex items-center justify-center "
-                                          )}
-                                        >
-                                          {item.quantities}
-                                        </span>
-                                        <Button
-                                          className="p-1 text-xs sm:text-sm  rounded-lg rounded-l-none border-l pr-2 sm:pr-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            increaseCount(filteredProduct);
-                                          }}
-                                          disabled={
-                                            item?.quantities >=
-                                            (filteredProduct?.stock || 1)
-                                          }
-                                        >
-                                          <IoMdAdd />
-                                        </Button>
-                                      </div>
-                                    ) : (filteredProduct?.stock ?? 0) > 0 ? (
-                                      user ? (
-                                        <Button
-                                          variant={"default"}
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            addtoCartByown(filteredProduct);
-                                          }}
-                                          className="border rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                                        >
-                                          Add to cart
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          variant={"default"}
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setIsLoginModalOpen(true);
-                                          }}
-                                          className="border  rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                                        >
-                                          Add to cart
-                                        </Button>
-                                      )
-                                    ) : (
-                                      <Button
-                                        variant={"default"}
-                                        disabled
-                                        className="border border-muted-foreground  rounded-lg h-10 px-4"
-                                      >
-                                        Out of Stock
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>{" "}
-                            </Link>
+                            <div className="h-full">
+                              <ProductCard
+                                product={filteredProduct}
+                                item={item}
+                                isInWishlist={isInWishlist}
+                              />
+                            </div>
                           </CarouselItem>
                         );
                       })}
                   </CarouselContent>
-                  <CarouselPrevious className="ml-9 sm:ml-16" />
-                  <CarouselNext className="mr-9 sm:mr-16" />
+
+                  {/* CAROUSEL NAVIGATION */}
+                  <CarouselPrevious className="hidden lg:flex absolute -left-4 top-1/2 -translate-y-1/2 bg-white shadow-lg border-0 hover:bg-gray-50 w-12 h-12 rounded-full" />
+                  <CarouselNext className="hidden lg:flex absolute -right-4 top-1/2 -translate-y-1/2 bg-white shadow-lg border-0 hover:bg-gray-50 w-12 h-12 rounded-full" />
                 </Carousel>
               </div>
             </div>
           ))
       )}
-    </div>
+
+      {/* EMPTY STATE */}
+      {!isLoading &&
+        categories.filter(
+          (category) =>
+            products.filter((p) => p.category === category.categoryId).length >=
+            5
+        ).length === 0 && (
+          <div className="text-center py-16">
+            <div className="text-gray-400 text-6xl mb-4">📦</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No categories available
+            </h3>
+            <p className="text-gray-600">
+              Check back later for new product categories.
+            </p>
+          </div>
+        )}
+    </section>
   );
 };
+
 export default Categories;

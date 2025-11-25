@@ -32,7 +32,7 @@ function SaleBanner() {
       });
   }, []);
   return (
-    <div className="relative sm:mt-0 -mt-4 w-full sm:h-full h-[200px] px-3 sm:px-4 sm:p-3 ">
+    <div className="relative  w-full sm:h-full h-[200px] px-3 sm:px-4 sm:p-3 ">
       {isLoading ? null : (
         <Image
           src={`${NEXT_PUBLIC_CLOUDINARY_URL}${img?.mediaUrl}` || ""}
@@ -40,7 +40,6 @@ function SaleBanner() {
           height={500}
           width={500}
           className=" w-full h-80 rounded-2xl object-cover "
-          
         />
       )}
     </div>
