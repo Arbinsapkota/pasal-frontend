@@ -445,8 +445,9 @@ export default function FavoriteModal() {
                             >
                               <div className="relative w-full h-20 cursor-pointer">
                                 <Image
-                                  src={item?.imageUrls?.[0] || "/product.png"}
-                                  alt={item.name || "pic"}
+                                  src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${item?.imageUrls}` ||
+                                    "/placeholder-image.png"}
+                                  alt={item.name || "Product image"}
                                   width={400}
                                   height={400}
                                   className="rounded h-20 w-full"

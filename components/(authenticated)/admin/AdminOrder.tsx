@@ -458,7 +458,7 @@ const AdminOrders = ({
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white scrollbar-thin max-w-3xl overflow-x-scroll shadow-md rounded-lg ">
+      <div className="bg-white shadow-md rounded-lg ">
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100">
             <tr>

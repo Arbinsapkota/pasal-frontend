@@ -24,6 +24,8 @@ export interface Product {
   subcategoryName?: string;
   labelImgUrl?: string;
   discountPrice?: number;
+  variableNo?: string;
+  vendorId?: string;
 }
 
 export interface CartItem {
@@ -40,6 +42,7 @@ export interface CartItem {
   imageUrls: string[] | null;
   wishlistId?: string;
   rating: number | null; // Add the rating property
+  variableNo?: string; // Add variableNo property
 
   // discountedPrice?: number | undefined;
 }
@@ -58,7 +61,7 @@ const cartSlice = createSlice({
       const newItem = action.payload;
 
       const existingItem = state.items.find(
-        item => item.productId === newItem.productId
+        item => item.productId === newItem.productId && item.variableNo === (newItem as any).variableNo
       );
 
       const itemPrice = newItem.price;
@@ -67,6 +70,7 @@ const cartSlice = createSlice({
         existingItem.quantities++;
         existingItem.totalPrice += itemPrice;
         if (newItem.itemId) existingItem.itemId = newItem.itemId;
+        if ((newItem as any).variableNo) existingItem.variableNo = (newItem as any).variableNo;
       } else {
         state.items.push({
           discountPercentage: newItem.discountPercentage,
@@ -84,6 +88,7 @@ const cartSlice = createSlice({
           itemId: newItem.itemId,
           rating: newItem.rating,
           stock: newItem?.stock,
+          variableNo: (newItem as any).variableNo,
         });
       }
     },

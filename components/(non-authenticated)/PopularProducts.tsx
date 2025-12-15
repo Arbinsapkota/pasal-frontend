@@ -36,6 +36,7 @@ import {
 } from "../ui/carousel";
 import { MdOutlineStar } from "react-icons/md";
 import { BsDash } from "react-icons/bs";
+import Link from "next/link";
 
 const PopularProducts: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -231,6 +232,10 @@ const PopularProducts: React.FC = () => {
     }
   };
 
+  const stop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
   const increaseCount = (product: Product) => {
     // Check if the product already exists in allItems
     const existingItem = allItems.find(
@@ -368,7 +373,7 @@ const PopularProducts: React.FC = () => {
             </Button>
           </div>
 
-          <div className="mx-auto mt-2 sm:mt-4">
+          <div className="mx-auto mt-2 sm:mt-4 ">
             <div className=" flex flex-col items-start justify-start">
               <div className=" w-full">
                 {isLoading ? (
@@ -392,219 +397,158 @@ const PopularProducts: React.FC = () => {
                         const isAddedInWishlist = wishlistItems.find(
                           item => item.productId == product.productId
                         );
+                        
+                        const discountPercent =
+                          product.discountPercentage ||
+                          (product.price > product.discountedPrice && product.discountedPrice > 0
+                            ? Math.round(
+                                ((product.price - product.discountedPrice) / product.price) * 100
+                              )
+                            : 0);
+
+                        const finalPrice = product.discountPercentage
+                          ? product.price - (product.price * product.discountPercentage) / 100
+                          : product.discountedPrice;
 
                         return (
                           <CarouselItem
                             key={index}
-                            className="basis-1/2 sm:basis-1/3 md:basis-1/3 lg:basis-1/4 xl:basis-1/5 pl-2"
+                            className="basis-1/2 sm:basis-1/3 md:basis-1/3 lg:basis-1/4 xl:basis-1/5 pl-2 "
                           >
-                            <div
-                              onClick={() =>
-                                router.push(
-                                  `/homepage/products/${product.productId}`
-                                )
-                              }
-                              className="p-1 sm:p-2 md:p-3 rounded-lg hover:bg-primaryBlue/15 transition-shadow group shadow-md border sm:w-[230px] w-auto cursor-pointer"
-                            >
-                              <div className="relative w-full">
-                                <div className="cursor-pointer">
-                                  {/* This is the line to fix */}
-                                  {((product.discountedPrice > 0 &&
-                                    product.price > product.discountedPrice) ||
-                                    product.discountPercentage > 0) && (
-                                    <div className="absolute sm:-top-1 top-1 -left-1 sm:-left-3 z-10">
-                                      <h1 className="text-xs px-2 py-1 bg-red-500 text-white font-semibold rounded-r-full text-start">
-                                        {product.discountPercentage
-                                          ? `${product.discountPercentage}% OFF`
-                                          : `${calculateDiscountPercent(
-                                              product.price,
-                                              product.discountedPrice
-                                            )}% OFF`}
-                                      </h1>
-                                    </div>
-                                  )}
+                            <Link
+      href={`/homepage/products/${product.productId}`}
+      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 block border border-gray-100 hover:border-orange-100"
+    >
+      {/* IMAGE */}
+      <div className="relative w-full aspect-[5/5] overflow-hidden bg-gray-50">
+        <Image
+          src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}`}
+          alt={product.name}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+        />
 
-                                  <div className="relative w-full aspect-square sm:h-[170px] h-auto">
-                                    <Image
-                                      src={
-                                        product.imageUrls[0] || "/product.png"
-                                      }
-                                      alt={product.name || "Product image"}
-                                      className="object-cover w-full h-full rounded-md"
-                                      fill
-                                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                    />
-                                  </div>
-                                  <div className="absolute top-1 sm:-top-1 right-1 sm:-right-1 z-10">
-                                    {user ? ( //mahendra
-                                      <Button
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          toggleWishlist(
-                                            product,
-                                            isAddedInWishlist != undefined
-                                          );
-                                          handleClick(product.productId);
-                                        }}
-                                        className={`text-sm sm:text-xl  z-10 bg-white pt-0 h-6 sm:h-8 p-1 sm:p-2 rounded-full border transition-all  text-white hover:bg-gray-200 ${
-                                          isAddedInWishlist
-                                            ? "text-[#0037c8]"
-                                            : "text-gray-400"
-                                        }`}
-                                      >
-                                        <GoHeartFill />
-                                      </Button>
-                                    ) : (
-                                      <Button
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setIsLoginModalOpen(true);
-                                        }}
-                                        className={`text-sm sm:text-xl  z-10 bg-white pt-0 h-6 sm:h-8 p-1 sm:p-2 rounded-full border transition-all   hover:text-[#0037c8] hover:bg-gray-200 text-gray-400 `}
-                                      >
-                                        <GoHeartFill />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
+        {/* DISCOUNT BADGE */}
+        {discountPercent > 0 && (
+          <div className="absolute top-3 left-3">
+            <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg">
+              {discountPercent}% OFF
+            </span>
+          </div>
+        )}
 
-                                <div className="mt-3 flex flex-col gap-1 justify-between">
-                                  <h2 className="mt-1 text-sm sm:text-base text-primary-btn truncate font-semibold">
-                                    {product.name}
-                                  </h2>
-                                  <div className="flex items-baseline">
-                                    <span className="price text-primary-btn">
-                                      Rs.
-                                      {(
-                                        product?.price -
-                                        (product.discountPercentage
-                                          ? (product?.price *
-                                              (product?.discountPercentage ??
-                                                0)) /
-                                            100
-                                          : product?.discountedPrice)
-                                      ).toFixed(0)}
-                                    </span>
-                                    {(product?.discountPercentage ||
-                                      product?.discountedPrice > 0) && (
-                                      <span className="text-xs sm:text-sm text-gray-500 line-through ml-1 sm:ml-2">
-                                        Rs.{(product?.price ?? 0).toFixed(0)}
-                                      </span>
-                                    )}
+        {/* WISHLIST */}
+        <button
+          onClick={e => {
+            stop(e);
+            toggleWishlist(product, !!isAddedInWishlist);
+            handleClick(product.productId);
+          }}
+          className={`absolute top-3 right-3 p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${
+            isAddedInWishlist
+              ? "bg-red-500 text-white"
+              : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500"
+          }`}
+        >
+          <GoHeartFill className="text-lg" />
+        </button>
+      </div>
 
-                                    {/* {product.discountedPrice &&
-                                    product.price > product.discountedPrice ? (
-                                      <>
-                                        <span className="price text-primary-btn">
-                                          Rs.
-                                          {product.discountedPrice.toFixed(0)}
-                                        </span>
-                                        <span className="sm:text-sm text-xs text-gray-500 line-through sm:ml-2 ml-1">
-                                          Rs.{product.price.toFixed(0)}
-                                        </span>
-                                      </>
-                                    ) : (
-                                     
-                                    )} */}
-                                  </div>
-                                </div>
-                              </div>
+      {/* CONTENT */}
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight group-hover:text-orange-700 transition-colors">
+          {product.name}
+        </h3>
 
-                              {/* stock nad the rating */}
-                              <div className="flex items-center justify-end">
-                                {/* Rating Section */}
-                                <div className="flex gap-0.5 items-center px-1.5">
-                                  {Number(product?.rating) > 0 ? (
-                                    <span className="ml-1 text-sm text-gray-700 font-medium">
-                                      {Number(product?.rating).toFixed(1)}
-                                    </span>
-                                  ) : (
-                                    <BsDash className="text-gray-400 text-xl" />
-                                  )}
-                                  <MdOutlineStar className="text-yellow-500 text-xl" />
-                                </div>
-                              </div>
+        {/* PRICE */}
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-lg font-bold text-gray-900">
+            Rs. {finalPrice.toFixed(0)}
+          </span>
+          {discountPercent > 0 && (
+            <span className="text-sm text-gray-500 line-through">
+              Rs. {product.price.toFixed(0)}
+            </span>
+          )}
+        </div>
 
-                              {/* add and remove the cart */}
-                              <div className="flex items-center  sm:mt-1 pb-1 sm:pb-2">
-                                <div className="ml-auto w-full flex   justify-center h-8 sm:h-10 ">
-                                  {item && item?.quantities > 0 ? (
-                                    <div className="flex  rounded-full">
-                                      <Button
-                                        className="p-1 text-xs sm:text-sm border-r  rounded-lg rounded-r-none pl-2 sm:pl-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          decreaseCount(product.productId);
-                                        }}
-                                      >
-                                        <RiSubtractFill />
-                                      </Button>
-                                      <span
-                                        className={cn(
-                                          buttonVariants({
-                                            variant: "default",
-                                          }),
-                                          "px-1 sm:px-2 w-10 sm:w-16 text-xs sm:text-base rounded-none border-none h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  flex items-center justify-center "
-                                        )}
-                                      >
-                                        {item.quantities}
-                                      </span>
-                                      <Button
-                                        className="p-1 text-xs sm:text-sm  rounded-lg rounded-l-none border-l pr-2 sm:pr-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          increaseCount(product);
-                                        }}
-                                        disabled={
-                                          item?.quantities >=
-                                          (product?.stock || 1)
-                                        }
-                                      >
-                                        <IoMdAdd />
-                                      </Button>
-                                    </div>
-                                  ) : product?.stock > 0 ? (
-                                    user ? (
-                                      <Button
-                                        variant={"default"}
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          addtoCartByown(product);
-                                        }}
-                                        className="border rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                                      >
-                                        Add to cart
-                                      </Button>
-                                    ) : (
-                                      <Button
-                                        variant={"default"}
-                                        onClick={e => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setIsLoginModalOpen(true);
-                                        }}
-                                        className="border  rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                                      >
-                                        Add to cart
-                                      </Button>
-                                    )
-                                  ) : (
-                                    <Button
-                                      variant={"default"}
-                                      disabled
-                                      className="border border-muted-foreground  rounded-lg h-10 px-4"
-                                    >
-                                      Out of Stock
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
+        {/* RATING */}
+        <div className="flex items-center mt-2">
+          {product.rating ? (
+            <span className="text-sm font-semibold text-gray-700">
+              {Number(product.rating).toFixed(1)}
+            </span>
+          ) : (
+            <BsDash className="text-gray-400 text-lg" />
+          )}
+          <MdOutlineStar className="text-yellow-500 text-xl ml-1" />
+        </div>
+
+        {/* CART BUTTONS */}
+        <div className="mt-3">
+          {item && item.quantities > 0 ? (
+            <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+              {/* DECREASE */}
+              <button
+                onClick={e => {
+                  stop(e);
+                  decreaseCount(product.productId);
+                }}
+                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
+              >
+                <RiSubtractFill className="text-lg" />
+              </button>
+
+              <span className="font-bold text-orange-700 min-w-[20px] text-center">
+                {item.quantities}
+              </span>
+
+              {/* INCREASE */}
+              <button
+                onClick={e => {
+                  stop(e);
+                  increaseCount(product);
+                }}
+                disabled={item.quantities >= (product.stock || 1)}
+                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
+              >
+                <IoMdAdd className="text-lg" />
+              </button>
+            </div>
+          ) : product.stock > 0 ? (
+            user ? (
+              <button
+                onClick={e => {
+                  stop(e);
+                  addtoCartByown(product);
+                }}
+                className="w-full mt-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold py-3 rounded-xl flex justify-center items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                Add to Cart
+              </button>
+            ) : (
+              <button
+                onClick={e => {
+                  stop(e);
+                  setIsLoginModalOpen(true);
+                }}
+                className="w-full mt-3 bg-orange-600 text-white py-3 rounded-xl shadow-sm hover:bg-orange-700 transition-all"
+              >
+                Add to Cart
+              </button>
+            )
+          ) : (
+            <button
+              disabled
+              className="w-full mt-3 bg-gray-300 text-gray-600 py-3 rounded-xl"
+            >
+              Out of Stock
+            </button>
+          )}
+        </div>
+      </div>
+    </Link>
                           </CarouselItem>
                         );
                       })}

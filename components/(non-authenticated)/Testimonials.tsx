@@ -2,13 +2,12 @@
 
 import React from "react";
 import Image from "next/image";
-// Using a simple SVG icon for a cleaner quote mark
+
 const QuoteIcon = () => (
   <svg
-    className="w-8 h-8 text-amber-500 mx-auto"
+    className="w-6 h-6 text-amber-500 mx-auto opacity-80"
     fill="currentColor"
     viewBox="0 0 24 24"
-    xmlns="http://www.w3.org/2000/svg"
   >
     <path d="M13.5 13.5h-3a1.5 1.5 0 010-3h3a1.5 1.5 0 010 3zM13.5 18h-3a1.5 1.5 0 010-3h3a1.5 1.5 0 010 3zM16.5 6a1.5 1.5 0 00-3 0v1.5a1.5 1.5 0 003 0V6zM16.5 10.5a1.5 1.5 0 00-3 0v1.5a1.5 1.5 0 003 0v-1.5z" />
     <path
@@ -18,7 +17,6 @@ const QuoteIcon = () => (
     />
   </svg>
 );
-
 
 interface Testimonial {
   testimonialId: string;
@@ -36,7 +34,7 @@ export default function TestimonialCards() {
       position: "Shop Owner",
       image: "/testimonials/arbin.jpg",
       description:
-        "हाम्रो पसलमा सेवा अनुभव अद्भुत छ! डेलिभरी छिटो भयो र सामान पूर्ण रूपमा सुरक्षित अवस्थामा पुग्यो। अत्यन्त सिफारिस गर्छु!",
+        "सेवा उत्कृष्ट! छिटो डेलिभरी र सुरक्षित प्याकेजिङ। अत्यन्त सन्तुष्ट छु।",
     },
     {
       testimonialId: "2",
@@ -44,7 +42,7 @@ export default function TestimonialCards() {
       position: "Customer",
       image: "/testimonials/sita.jpg",
       description:
-        "सामानहरूको विविधता धेरै राम्रो छ र छुटहरू असाध्यै आकर्षक छन्। ग्राहक सेवा पनि धेरै मैत्रीपूर्ण छ!",
+        "उत्तम ग्राहक सेवा, छान्न सजिलो प्रोडक्ट र समयमै डेलिभरी – एकदम सिफारिस गर्छु!",
     },
     {
       testimonialId: "3",
@@ -52,69 +50,72 @@ export default function TestimonialCards() {
       position: "Entrepreneur",
       image: "/testimonials/ramesh.jpg",
       description:
-        "यहाँ किनमेल गर्नु सधैं रमाइलो हुन्छ। वेबसाइट प्रयोग गर्न सजिलो छ र Checkout प्रक्रिया छिटो र सुरक्षित छ।",
+        "प्रयोगमैत्री वेबसाइट, छिटो checkout र हरेक चीज व्यवस्थित। शानदार अनुभव!",
     },
   ];
 
   return (
-    // 1. Softer, slightly off-white background for depth
-    <section className="py-20 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        {/* Title & Subtitle */}
-        <h2 className="text-center text-sm tracking-widest font-semibold uppercase text-amber-500 mb-2">
-          CUSTOMER VOICES
+    <section className="py-14 bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4">
+        
+        {/* HEADER */}
+        <h2 className="text-center text-xs tracking-widest font-semibold uppercase text-amber-500">
+          CUSTOMER STORIES
         </h2>
-        {/* 2. Darker, more serious primary heading */}
-        <p className="text-center text-4xl font-extrabold text-gray-900 mb-4">
-          What Our Clients Say
-        </p>
-        <p className="text-center text-lg text-gray-600 mb-16 max-w-2xl mx-auto">
-          Hear from the entrepreneurs and customers who trust our platform for quality and service.
+
+        <p className="text-center text-3xl font-bold text-gray-900 mt-1 mb-3">
+          Trusted By Thousands
         </p>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {testimonials.map((testimonial) => (
+        <p className="text-center text-base text-gray-600 max-w-xl mx-auto mb-12">
+          Hear what our valued customers say about their shopping experience.
+        </p>
+
+        {/* GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {testimonials.map((t) => (
             <div
-              key={testimonial.testimonialId}
-              // 3. Elevated Card Design: Rounded corners, larger padding, subtle shadow, and a dark border on hover
-              className="bg-white rounded-2xl p-10 pt-16 text-center relative transition duration-300 ease-in-out transform hover:shadow-xl shadow-lg border-t-4 border-amber-500/0 hover:border-amber-500"
+              key={t.testimonialId}
+              className="
+                bg-white/90 
+                backdrop-blur 
+                rounded-2xl 
+                px-6 pt-14 pb-6 
+                shadow-[0_4px_18px_rgba(0,0,0,0.06)]
+                hover:shadow-[0_6px_25px_rgba(0,0,0,0.10)]
+                transition-all 
+                duration-300 
+                relative
+              "
             >
               
-              {/* Avatar with fallback - positioned to slightly overlap the card top */}
-              <div className="w-28 h-28 mx-auto rounded-full overflow-hidden shadow-xl ring-4 ring-white absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+              {/* Avatar */}
+              <div className="w-20 h-20 rounded-full overflow-hidden shadow-md ring-4 ring-white absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <Image
-                  src={testimonial.image || "/default-profile.png"}
-                  alt={testimonial.name}
-                  width={112} // w-28 = 112px
-                  height={112}
-                  className="object-cover w-full h-full"
+                  src={t.image || "/default-profile.png"}
+                  alt={t.name}
+                  width={100}
+                  height={100}
+                  className="object-cover"
                 />
               </div>
 
               {/* Quote Icon */}
-              <div className="mt-2 mb-4">
+              <div className="flex justify-center mt-2">
                 <QuoteIcon />
               </div>
 
-              {/* Quote */}
-              {/* 4. Improved typography for the description */}
-              <p className="text-gray-800 text-base italic leading-relaxed">
-                {testimonial.description}
+              {/* Text */}
+              <p className="text-gray-700 text-sm leading-relaxed mt-4 italic">
+                {t.description}
               </p>
 
-              {/* Name & Position Divider */}
-              <div className="w-12 h-0.5 bg-gray-200 mx-auto my-6"></div>
+              <div className="w-10 h-[2px] bg-gray-200 mx-auto my-4" />
 
-
-              {/* Name */}
-              <h3 className="font-bold text-xl text-gray-900">
-                {testimonial.name}
+              <h3 className="text-gray-900 font-semibold text-lg">
+                {t.name}
               </h3>
-              {/* 5. Subtler position text with the accent color */}
-              <p className="text-sm text-amber-600 font-medium mt-1">
-                {testimonial.position}
-              </p>
+              <p className="text-amber-600 text-xs font-medium">{t.position}</p>
             </div>
           ))}
         </div>
@@ -122,4 +123,5 @@ export default function TestimonialCards() {
     </section>
   );
 }
+
 export { TestimonialCards };

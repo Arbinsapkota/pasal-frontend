@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { axiosAuthInstance, axiosInstance } from "../axiosInstance";
 import { getUserFromCookies } from "../cookie/cookie";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
 import { Button, buttonVariants } from "../ui/button";
 import {
   Dialog,
@@ -796,134 +797,139 @@ const Checkout: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-white  p-4 rounded-md border shadow-sm">
-          {/* mahendra */}
-          <h2 className="text-xl font-semibold mb-3">Order Summary </h2>
-          {checkoutItems.length === 0 ? (
-            <p>No items in the checkout.</p>
-          ) : (
-            <div className="grid lg:grid-cols-2 max-h-[16rem] overflow-y-auto scrollbar-thin gap-2">
-              {checkoutItems.map(item => (
-                <div key={item.productId} className="flex items-center mb-4">
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.name || "pic"}
-                    width={200}
-                    height={200}
-                    style={{ objectFit: "cover" }}
-                    className="rounded h-20 w-20"
-                  />
-                  <div className="ml-4">
-                    <p className="font-medium text-wrap">{item.name}</p>
-                    <p>Quantity: {item.quantity}</p>
-                    <p className="sm:text-sm text-xs text-gray-500 text-red-500">
-                      Discount: Rs.
-                      {(item?.discountPercentage
-                        ? (item.price * item.discountPercentage) / 100
-                        : item.discountPrice) * item.quantity}
-                    </p>
-                    <div >
-                      <p className="text-primaryBlue sm:text-lg text-sm font-semibold">
-                        Rs.
-                        {(
-                          item.price -
-                          (item.discountPercentage
-                            ? (item.price * item.discountPercentage) / 100
-                            : 0) *
-                            item.quantity
-                        ).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* mahendra */}
-          <div>
+        <div className="bg-white p-4 rounded-md border shadow-sm">
+  <h2 className="text-xl font-semibold mb-3">Order Summary </h2>
+  {checkoutItems.length === 0 ? (
+    <p>No items in the checkout.</p>
+  ) : (
+    <div className="grid lg:grid-cols-2 max-h-[16rem] overflow-y-auto scrollbar-thin gap-2">
+      {checkoutItems.map(item => (
+        <div key={item.productId} className="flex items-center mb-4">
+          <Image
+            src={`${NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrl}`}
+            alt={item.name || "pic"}
+            width={200}
+            height={200}
+            style={{ objectFit: "cover" }}
+            className="rounded h-20 w-20"
+          />
+          <div className="ml-4">
+            <p className="font-medium text-wrap">{item.name}</p>
+            <p>Quantity: {item.quantity}</p>
+            <p className="sm:text-sm text-xs text-gray-500 text-red-500">
+              Discount: Rs.
+              {(
+                item.discountPercentage
+                  ? (item.price * item.discountPercentage) / 100 * item.quantity
+                  : item.discountPrice * item.quantity
+              ).toFixed(2)}
+            </p>
             <div>
-              <p className="text-primaryBlue font-semibold">Coupon Code</p>
-            </div>
-            <div className=" flex gap-2 items-center">
-              <input
-                type="text"
-                name="discountCode"
-                value={couponCode}
-                onChange={e => setCouponCode(e.target.value)}
-                placeholder="Discount Code (optional)"
-                className="px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primaryBlue"
-              />
-              <Button onClick={submitCoupon}>Apply </Button>
+              <p className="text-primaryBlue sm:text-lg text-sm font-semibold">
+                Rs.
+                {(
+                  (item.price - (item.discountPercentage
+                    ? (item.price * item.discountPercentage) / 100
+                    : item.discountPrice)) * item.quantity
+                ).toFixed(2)}
+              </p>
             </div>
           </div>
-          <p className="text-lg mt-1">
-            Subtotal: Rs.
-            {checkoutItems
-              .reduce((sum, item) => sum + item.quantity * item.price, 0)
-              .toFixed(2)}
-          </p>
-          <p className="text-lg mt-1 font-semibold text-red-500">
-            Coupon Discount: Rs. {discountValue.toFixed(2)}
-          </p>
-          {selectedDelivery && (
-            <p className="text-green-600">
-              Delivery Charge: Rs.
-              {
-                deliveryOption.find(item => item.optionId === selectedDelivery)
-                  ?.charge
-              }
-            </p>
-          )}
-          {selectedDelivery && (
-            <p>
-              Description:{" "}
-              <span>
-                {
-                  deliveryOption.find(
-                    item => item.optionId === selectedDelivery
-                  )?.description
-                }
-              </span>
-            </p>
-          )}
-          {selectedDelivery && (
-            <p>
-              Delivery Duration:{" "}
-              <span>
-                {
-                  deliveryOption.find(
-                    item => item.optionId === selectedDelivery
-                  )?.deliveryDays
-                }
-                {deliveryOption.find(item => item.optionId === selectedDelivery)
-                  ?.deliveryDays === 1
-                  ? " day"
-                  : " days"}
-              </span>
-            </p>
-          )}
-          <p className="w-full border-b-2 mt-2 border-gray-300"></p>
-          <p className="font-bold text-lg mt-2">
-            Total: Rs.
-            {(
-              checkoutItems.reduce(
-                (sum, item) => sum + item.quantity * item.price,
-                0
-              ) -
-              discountValue +
-              deliveryCharge
-            ).toFixed(2)}
-          </p>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            onClick={handleSubmit}
-            className="mt-2 w-full"
-          >
-            {isSubmitting ? "Submitting..." : "Place Order"}
-          </Button>
         </div>
+      ))}
+    </div>
+  )}
+
+  <div>
+    <div>
+      <p className="text-primaryBlue font-semibold">Coupon Code</p>
+    </div>
+    <div className="flex gap-2 items-center">
+      <input
+        type="text"
+        name="discountCode"
+        value={couponCode}
+        onChange={e => setCouponCode(e.target.value)}
+        placeholder="Discount Code (optional)"
+        className="px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primaryBlue"
+      />
+      <Button onClick={submitCoupon}>Apply</Button>
+    </div>
+  </div>
+
+  <p className="text-lg mt-1">
+    Subtotal: Rs.
+    {checkoutItems
+      .reduce((sum, item) => sum + item.price * item.quantity, 0)
+      .toFixed(2)}
+  </p>
+  <p className="text-lg mt-1 font-semibold text-red-500">
+    Coupon Discount: Rs. {discountValue.toFixed(2)}
+  </p>
+
+  {selectedDelivery && (
+    <p className="text-green-600">
+      Delivery Charge: Rs.
+      {
+        deliveryOption.find(item => item.optionId === selectedDelivery)
+          ?.charge
+      }
+    </p>
+  )}
+  {selectedDelivery && (
+    <p>
+      Description:{" "}
+      <span>
+        {
+          deliveryOption.find(
+            item => item.optionId === selectedDelivery
+          )?.description
+        }
+      </span>
+    </p>
+  )}
+  {selectedDelivery && (
+    <p>
+      Delivery Duration:{" "}
+      <span>
+        {
+          deliveryOption.find(
+            item => item.optionId === selectedDelivery
+          )?.deliveryDays
+        }
+        {deliveryOption.find(item => item.optionId === selectedDelivery)
+          ?.deliveryDays === 1
+          ? " day"
+          : " days"}
+      </span>
+    </p>
+  )}
+
+  <p className="w-full border-b-2 mt-2 border-gray-300"></p>
+  <p className="font-bold text-lg mt-2">
+    Total: Rs.
+    {(
+      checkoutItems.reduce((sum, item) => {
+        const discountAmount = item.discountPercentage
+          ? (item.price * item.discountPercentage) / 100
+          : item.discountPrice;
+        return sum + (item.price - discountAmount) * item.quantity;
+      }, 0) + (selectedDelivery
+        ? deliveryOption.find(item => item.optionId === selectedDelivery)?.charge || 0
+        : 0) - discountValue
+    ).toFixed(2)}
+  </p>
+
+  <Button
+    type="submit"
+    disabled={isSubmitting}
+    onClick={handleSubmit}
+    className="mt-2 w-full"
+  >
+    {isSubmitting ? "Submitting..." : "Place Order"}
+  </Button>
+</div>
+
 
         <div></div>
       </div>

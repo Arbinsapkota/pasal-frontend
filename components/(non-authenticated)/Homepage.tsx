@@ -46,11 +46,11 @@ function Homepage() {
   return (
     <>
       <Container className="fixed  w-full z-50 transition-all duration-1000 bg-red-900" >
-        {!scrolled && (
+        {/* {!scrolled && (
           <div className="bg-white shadow">
             <TopNavBar />
           </div>
-        )}
+        )} */}
         <div
           className={`bg-white transition-all duration-300 ${
             scrolled ? "fixed top-0 w-full" : ""

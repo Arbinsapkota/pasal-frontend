@@ -240,7 +240,7 @@ const ProductbyCategories: React.FC = () => {
           {/* CATEGORY & RATING */}
           <div className="flex justify-between items-center mb-2">
             <span className="text-orange-600 font-medium text-sm">
-              {product.category?.name || "Category"}
+              {product.categoryName || "Category"}
             </span>
           </div>
 

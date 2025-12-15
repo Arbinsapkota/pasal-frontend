@@ -97,7 +97,7 @@ const OrderItem: React.FC<OrderItemModalProps> = ({ order, closeModal }) => {
                       {/* Product Image */}
                       <div className="relative w-40 h-20">
                         <Image
-                          src={item.imageUrl || "/product.png"}
+                          src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrl}`}
                           alt={item.productName || "pic"}
                           layout="fill"
                           objectFit="cover"

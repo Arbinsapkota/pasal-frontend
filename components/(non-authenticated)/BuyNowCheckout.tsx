@@ -29,6 +29,7 @@ import Link from "next/link";
 import { FaChevronRight } from "react-icons/fa";
 import { clearCart } from "@/redux/slices/cartSlice";
 import LoadingContent from "../loaidng/LoaidngCotent";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
 
 export interface ShippingDetails {
   shippingId: string;
@@ -814,7 +815,7 @@ const BuyNowCheckout: React.FC = () => {
               {checkoutItems.map(item => (
                 <div key={item.productId} className="flex items-center mb-4">
                   <Image
-                    src={item.imageUrl}
+                    src={`${NEXT_PUBLIC_CLOUDINARY_URL}${item?.imageUrl}`}
                     alt={item.name || "pic"}
                     width={200}
                     height={200}

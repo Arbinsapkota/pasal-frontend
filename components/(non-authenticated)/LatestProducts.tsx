@@ -93,7 +93,7 @@ const LatestProducts: React.FC = () => {
 
     if (type === "ADD" || type === "INCREASE") {
       dispatch(addToCart(product));
-      const newQty = existingItem ? existingItem.quantities + 1 : 1;
+      const newQty = existingItem?.quantities ? existingItem.quantities + 1 : 1;
 
       axiosAuthInstance()
         .post("/api/cart/add", {
@@ -104,7 +104,7 @@ const LatestProducts: React.FC = () => {
     }
 
     if (type === "DECREASE") {
-      if (existingItem?.quantities > 1) {
+      if (existingItem?.quantities && existingItem.quantities > 1) {
         dispatch(removeFromCart(product.productId));
 
         axiosAuthInstance()
@@ -175,103 +175,111 @@ const LatestProducts: React.FC = () => {
 
     return (
       <Link
-        href={`/homepage/products/${product.productId}`}
-        className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 block border border-gray-100 hover:border-orange-100"
+  href={`/homepage/products/${product.productId}`}
+  className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 block border border-gray-100 hover:border-orange-100"
+>
+  {/* IMAGE CONTAINER */}
+  <div className="relative w-full aspect-[5/5] overflow-hidden bg-gray-50">
+    <Image
+      src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}`}
+      alt={product.name}
+      fill
+      className="object-cover group-hover:scale-105 transition-transform duration-500"
+      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
+    />
+
+    {/* DISCOUNT BADGE */}
+    {discount > 0 && (
+      <div className="absolute top-3 left-3">
+        <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg">
+          {discount}% OFF
+        </span>
+      </div>
+    )}
+
+    {/* WISHLIST BUTTON */}
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleWishlist(product, e); // now works properly
+      }}
+      className={`absolute top-3 right-3 p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${
+        isLiked
+          ? "bg-red-500 text-white"
+          : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500"
+      }`}
+    >
+      <GoHeartFill className="text-lg" />
+    </button>
+  </div>
+
+  {/* CONTENT */}
+  <div className="p-4">
+    <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight group-hover:text-orange-700 transition-colors">
+      {product.name}
+    </h3>
+
+    {/* PRICE */}
+    <div className="flex items-center gap-2 mt-2">
+      <span className="text-lg font-bold text-gray-900">
+        NRS {formatPrice(finalPrice)}
+      </span>
+      {discount > 0 && (
+        <span className="text-sm text-gray-500 line-through">
+          NRS {formatPrice(product.price)}
+        </span>
+      )}
+    </div>
+
+    {/* CART CONTROLS */}
+    {qty > 0 ? (
+      <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl mt-3 px-3 py-2">
+        
+        {/* DECREASE */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleUpdateCart(product, "DECREASE");
+          }}
+          className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
+        >
+          <RiSubtractFill className="text-lg" />
+        </button>
+
+        <span className="font-bold text-orange-700 min-w-[20px] text-center">
+          {qty}
+        </span>
+
+        {/* INCREASE */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleUpdateCart(product, "INCREASE");
+          }}
+          className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
+        >
+          <IoMdAdd className="text-lg" />
+        </button>
+      </div>
+    ) : (
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleUpdateCart(product, "ADD");
+        }}
+        className="w-full mt-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold py-3 rounded-xl flex justify-center items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
       >
-        {/* IMAGE CONTAINER */}
-        <div className="relative w-full aspect-[5/5] overflow-hidden bg-gray-50">
-          <Image
-            src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}`}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-          />
+        <PiBagFill className="text-lg" />
+        Add to Cart
+      </button>
+    )}
+  </div>
+</Link>
 
-          {/* DISCOUNT BADGE */}
-          {discount > 0 && (
-            <div className="absolute top-3 left-3">
-              <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg">
-                {discount}% OFF
-              </span>
-            </div>
-          )}
-
-          {/* WISHLIST BUTTON */}
-          <button
-            onClick={(e) => toggleWishlist(product, e)}
-            className={`absolute top-3 right-3 p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${
-              isLiked
-                ? "bg-red-500 text-white"
-                : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500"
-            }`}
-          >
-            <GoHeartFill className="text-lg" />
-          </button>       
-        </div>
-
-        {/* CONTENT */}
-        <div className="p-4">
-          <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight group-hover:text-orange-700 transition-colors">
-            {product.name}
-          </h3>
-
-          {/* PRICE SECTION */}
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-lg font-bold text-gray-900">
-              NRS {formatPrice(finalPrice)}
-            </span>
-            {discount > 0 && (
-              <span className="text-sm text-gray-500 line-through">
-                NRS {formatPrice(product.price)}
-              </span>
-            )}
-          </div>
-
-          {/* QUANTITY CONTROLS */}
-          {qty > 0 ? (
-            <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl mt-3 px-3 py-2">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleUpdateCart(product, "DECREASE");
-                }}
-                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
-              >
-                <RiSubtractFill className="text-lg" />
-              </button>
-
-              <span className="font-bold text-orange-700 min-w-[20px] text-center">
-                {qty}
-              </span>
-
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleUpdateCart(product, "INCREASE");
-                }}
-                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
-              >
-                <IoMdAdd className="text-lg" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleUpdateCart(product, "ADD");
-              }}
-              className="w-full mt-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold py-3 rounded-xl flex justify-center items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <PiBagFill className="text-lg" />
-              Add to Cart
-            </button>
-          )}
-        </div>
-      </Link>
     );
   };
 
@@ -280,13 +288,13 @@ const LatestProducts: React.FC = () => {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-12">
         <div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+          <h2 className="text-3xl sm:text-3xl lg:text-3xl font-bold text-gray-900 leading-tight">
             Today's Best Deals{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">
               For You
             </span>
           </h2>
-          <p className="text-gray-600 mt-2 text-lg">
+          <p className="text-gray-600 mt-2 text-sm">
             Discover amazing products at unbeatable prices
           </p>
         </div>
@@ -301,7 +309,7 @@ const LatestProducts: React.FC = () => {
 
       {/* PRODUCTS CAROUSEL */}
       {isLoading ? (
-        <div className="flex gap-6 overflow-x-auto scrollbar-hide">
+        <div className="bottom-20 flex gap-6 overflow-x-auto scrollbar-hide">
           {Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className="min-w-[280px] flex-shrink-0">
               <ProductCardLoading />

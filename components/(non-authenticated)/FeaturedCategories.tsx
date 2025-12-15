@@ -7,6 +7,7 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { NEXT_PUBLIC_CLOUDINARY_URL } from "@/components/env";
+import { useRouter } from "next/navigation";
 
 type Category = {
   id?: string | number;
@@ -17,6 +18,7 @@ type Category = {
 const FeaturedCategories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fetching, setFetching] = useState<boolean>(true);
+  const router = useRouter();
 
   const fetchCategories = async () => {
     setFetching(true);
@@ -59,11 +61,16 @@ const FeaturedCategories = () => {
     ],
   };
 
-  // ⭐ Show only first 6 categories in grid
   const firstSix = categories.slice(0, 6);
 
+  // Redirect function
+  const handleCategoryClick = (category: Category) => {
+    // Example route: /category/[id] or /category/[name]
+    router.push(`/category/${category.id || category.name}`);
+  };
+
   return (
-    <section className="py-14 ">
+    <section className="py-14">
       <div className="text-center mb-10">
         <p className="text-sm text-gray-500 tracking-wide">Shop by Category</p>
         <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
@@ -75,8 +82,12 @@ const FeaturedCategories = () => {
         {categories.length > 6 ? (
           <Slider {...carouselSettings}>
             {categories.map((cat, index) => (
-              <div key={cat.id || index} className="px-3">
-                <div className=" p-4   transition-all duration-300 hover:-translate-y-1">
+              <div
+                key={cat.id || index}
+                className="px-3 cursor-pointer"
+                onClick={() => handleCategoryClick(cat)}
+              >
+                <div className="p-4 transition-all duration-300 hover:-translate-y-1">
                   <div className="w-24 h-24 mx-auto bg-gray-50 shadow-inner flex items-center justify-center overflow-hidden rounded-full">
                     <Image
                       src={
@@ -97,12 +108,12 @@ const FeaturedCategories = () => {
             ))}
           </Slider>
         ) : (
-          // ⭐ Show clean premium grid of 6
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
             {firstSix.map((cat, index) => (
               <div
                 key={cat.id || index}
-                className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all hover:-translate-y-1"
+                className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all hover:-translate-y-1 cursor-pointer"
+                onClick={() => handleCategoryClick(cat)}
               >
                 <div className="w-24 h-24 mx-auto rounded-xl bg-gray-50 shadow-inner flex items-center justify-center overflow-hidden">
                   <Image
