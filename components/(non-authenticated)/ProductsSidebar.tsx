@@ -43,12 +43,16 @@ interface CategoryStates {
   setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
   categories: Category[];
   allProducts: Product[];
-  setSelectedSubCategoryDetails: React.Dispatch<React.SetStateAction<Subcategory[]>>;
+  setSelectedSubCategoryDetails: React.Dispatch<
+    React.SetStateAction<Subcategory[]>
+  >;
   isLoading: boolean;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   loading: boolean;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  setSelectedCategoryId: React.Dispatch<React.SetStateAction<string | undefined>>;
+  setSelectedCategoryId: React.Dispatch<
+    React.SetStateAction<string | undefined>
+  >;
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   setAllProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   setIsUpdated: React.Dispatch<React.SetStateAction<boolean>>;
@@ -98,29 +102,53 @@ const ProductsSidebar = ({
       return updatedSubCats;
     });
   };
-
+console.log("-----------",selectedCategoryId)
   const fetchProducts = useCallback(
-    debounce((min: number, max: number, subcategoryIds?: string[] | null) => {
-      setLoading(true);
-      const params: any = { minPrice: min, maxPrice: max };
+    debounce(
+      (
+        min: number,
+        max: number,
+        subcategoryIds?: string[] | null,
+        categoryId?: string
+      ) => {
+        setLoading(true);
 
-      axios
-        .get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/`, { params })
-        .then((res) => {
-          let filtered = res.data;
-          if (subcategoryIds && subcategoryIds.length > 0) {
-            filtered = filtered.filter((product: any) =>
-              subcategoryIds.includes(product.subcategory)
-            );
-          }
-          setProducts(filtered);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Error fetching products:", err);
-          setLoading(false);
-        });
-    }, 500),
+        const params: any = {
+          minPrice: min,
+          maxPrice: max,
+        };
+
+        axios
+          .get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/`, {
+            params,
+          })
+          .then((res) => {
+            let filtered = res.data;
+
+            // ✅ FILTER BY CATEGORY
+            if (categoryId) {
+              filtered = filtered.filter(
+                (product: any) => product.category?.category === categoryId
+              );
+            }
+
+            // ✅ FILTER BY SUBCATEGORY
+            if (subcategoryIds && subcategoryIds.length > 0) {
+              filtered = filtered.filter((product: any) =>
+                subcategoryIds.includes(product.subcategory)
+              );
+            }
+
+            setProducts(filtered);
+            setLoading(false);
+          })
+          .catch((err) => {
+            console.error("Error fetching products:", err);
+            setLoading(false);
+          });
+      },
+      500
+    ),
     []
   );
 
@@ -130,15 +158,21 @@ const ProductsSidebar = ({
       setIsLoading(true);
 
       try {
-        const categoryRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`);
+        const categoryRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/category/`
+        );
         setCategories(categoryRes.data);
 
-        const productRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/`);
+        const productRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/`
+        );
         setAllProducts(productRes.data);
         setProducts(productRes.data);
         setIsUpdated(true);
 
-        const subRes = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/subcategory/`);
+        const subRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/subcategory/`
+        );
         setAllSubCategories(subRes.data);
         setSubCategories(subRes.data);
       } catch (error) {
@@ -155,14 +189,18 @@ const ProductsSidebar = ({
   useEffect(() => {
     if (selectedCategoryId) {
       setSubCategories(
-        allSubCategories.filter((s) => s.category.categoryId === selectedCategoryId)
+        allSubCategories.filter(
+          (s) => s.category.categoryId === selectedCategoryId
+        )
       );
     }
   }, [selectedCategoryId, allSubCategories]);
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
-    const subs = allSubCategories.filter((s) => s.category.categoryId === categoryId);
+    const subs = allSubCategories.filter(
+      (s) => s.category.categoryId === categoryId
+    );
     setSubCategories(subs);
   };
 
@@ -188,13 +226,22 @@ const ProductsSidebar = ({
         shadow-[0_8px_30px_rgb(0,0,0,0.12)]
         transition-all duration-500
         rounded-r-2xl
-        ${isSidebarOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"}
+        ${
+          isSidebarOpen
+            ? "translate-x-0 opacity-100"
+            : "-translate-x-full opacity-0"
+        }
       `}
     >
       {/* Header */}
       <div className="flex justify-between items-center mb-6 mt-10">
-        <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">Categories</h2>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-2xl sm:hidden block">
+        <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">
+          Categories
+        </h2>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="text-2xl sm:hidden block"
+        >
           {isSidebarOpen ? <MdOutlineMenuOpen /> : <RiMenuFold2Fill />}
         </button>
       </div>
@@ -224,7 +271,9 @@ const ProductsSidebar = ({
 
                 <AccordionContent className="px-4 pb-3 pt-1 space-y-2">
                   {subCategories
-                    .filter((s) => s.category.categoryId === category.categoryId)
+                    .filter(
+                      (s) => s.category.categoryId === category.categoryId
+                    )
                     .map((sub) => (
                       <div
                         key={sub.subcategoryId}
@@ -232,11 +281,18 @@ const ProductsSidebar = ({
                       >
                         <Checkbox
                           id={sub.subcategoryId}
-                          checked={selectedSubCategory.includes(sub.subcategoryId)}
-                          onCheckedChange={() => handleCheckboxChange(sub.subcategoryId)}
+                          checked={selectedSubCategory.includes(
+                            sub.subcategoryId
+                          )}
+                          onCheckedChange={() =>
+                            handleCheckboxChange(sub.subcategoryId)
+                          }
                           className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                         />
-                        <label htmlFor={sub.subcategoryId} className="text-sm font-medium text-gray-700 cursor-pointer">
+                        <label
+                          htmlFor={sub.subcategoryId}
+                          className="text-sm font-medium text-gray-700 cursor-pointer"
+                        >
                           {capitalizeFirstLetter(sub.name)}
                         </label>
                       </div>
@@ -258,7 +314,9 @@ const ProductsSidebar = ({
               <input
                 type="number"
                 value={priceRange[0]}
-                onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                onChange={(e) =>
+                  setPriceRange([Number(e.target.value), priceRange[1]])
+                }
                 className="w-full px-3 py-2 mt-1 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-600 text-sm"
               />
             </div>
@@ -268,7 +326,9 @@ const ProductsSidebar = ({
               <input
                 type="number"
                 value={priceRange[1]}
-                onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                onChange={(e) =>
+                  setPriceRange([priceRange[0], Number(e.target.value)])
+                }
                 className="w-full px-3 py-2 mt-1 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-600 text-sm"
               />
             </div>
@@ -279,7 +339,7 @@ const ProductsSidebar = ({
             <Slider
               value={priceRange}
               onChange={handleChange}
-              min={0}         // 🔥 changed to 0
+              min={0} // 🔥 changed to 0
               max={500000}
               valueLabelDisplay="auto"
               sx={{
@@ -308,7 +368,8 @@ const ProductsSidebar = ({
 
           {/* Display */}
           <p className="text-sm text-gray-600 text-center">
-            Rs {priceRange[0].toLocaleString()} — Rs {priceRange[1].toLocaleString()}
+            Rs {priceRange[0].toLocaleString()} — Rs{" "}
+            {priceRange[1].toLocaleString()}
           </p>
         </div>
       </div>
