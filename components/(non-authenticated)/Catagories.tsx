@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   addToCart,
   CartItem,
+  deleteFromCart,
   Product,
   removeFromCart,
 } from "@/redux/slices/cartSlice";
@@ -21,10 +22,10 @@ import axios from "axios";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { GoHeartFill } from "react-icons/go";
 import { IoMdAdd } from "react-icons/io";
-import { IoChevronForwardSharp } from "react-icons/io5";
+import { IoChevronForwardSharp, IoStar } from "react-icons/io5";
 import { RiSubtractFill } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -37,6 +38,8 @@ import { Button, buttonVariants } from "../ui/button";
 import { MdOutlineStar } from "react-icons/md";
 import { BsDash } from "react-icons/bs";
 import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
+import { PiBagFill } from "react-icons/pi";
+import { FaTag } from "react-icons/fa";
 
 const Categories = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -93,252 +96,273 @@ const Categories = () => {
     fetchCartData();
   }, []);
 
-  // 1️⃣ Increment / Update existing item
-  const countApi = useCallback(
-    useDebouncedCallback((product: any, quantity: number) => {
-      const existingItem = cartData.find(
-        (item) => item.productId === product.productId
-      );
-
-      if (existingItem && existingItem.itemId) {
-        axiosAuthInstance()
-          .post("/api/cart/update", {
-            itemId: existingItem.itemId,
-            quantity,
-          })
-          .then(() => {
-            // if (!existingItem?.itemId ) {
-            //   fetchCartData(); // Refresh cart after update
-            // }
-          })
-          .catch((err) => {
-            toast.error("Failed to update cart");
-            console.error(err);
-          });
-      }
-    }, 400),
-    [cartData]
-  );
-
-  // 2️⃣ Add new product to cart
-  const addToCartByApi = useCallback((product: any, quantity: number) => {
-    axiosAuthInstance()
-      .post("/api/cart/add", {
-        products: { productId: product.productId },
-        quantity,
-      })
-      .then(() => {
-        fetchCartData(); // Refresh cart after adding
-      })
-      .catch((err) => {
-        toast.error("Failed to add to cart");
-        console.error(err);
-      });
-  }, []);
-
-  const addtoCartByown = (product: Product) => {
-    // Check if the product already exists in allItems
-    const existingItem = allItems.find(
-      (item) => item.productId === product.productId
+  const useCartWishlist = () => {
+    const dispatch = useDispatch();
+    const items = useSelector((state: RootState) => state.cart.items);
+    const wishlistItems = useSelector(
+      (state: RootState) => state.wishlist.items
     );
+    const user = getUserFromCookies();
 
-    const itemPrice = product.price;
+    // CART HANDLER
+    const updateCart = async (
+      product: any,
+      type: "ADD" | "INCREASE" | "DECREASE"
+    ) => {
+      if (!user) return toast.info("Please log in to manage your cart.");
+      if (product.stock === 0) return toast.error("Product is out of stock!");
 
-    let updatedItems;
-    if (existingItem) {
-      // If the product exists, increase quantity and update the total price
-      updatedItems = allItems.map((item) =>
-        item.productId === product.productId
-          ? {
-              ...item,
-              quantities: item.quantities + 1,
-              totalPrice: item.totalPrice + itemPrice,
-            }
-          : item
-      );
-    } else {
-      // If the product does not exist, add it to allItems
-      updatedItems = [
-        ...allItems,
-        {
-          discountPrice: product.discountPrice || 0,
-          discountPercentage: product.discountPercentage || 0,
+      const existingItem = items.find((i) => i.productId === product.productId);
+      const currentQty = existingItem?.quantities || 0;
+      const newQty =
+        type === "ADD"
+          ? 1
+          : type === "INCREASE"
+          ? currentQty + 1
+          : currentQty - 1;
+
+      if (newQty > product.stock)
+        return toast.error(`Only ${product.stock} items available!`);
+
+      try {
+        const productForCart = {
           productId: product.productId,
-          names: product.name,
-          quantities: 1,
-          prices: itemPrice,
-          totalPrice: itemPrice,
-          imageUrls: product.imageUrls,
-          rating: product.rating,
-        },
-      ];
-    }
-    // Update local state
-    setAllItems(updatedItems);
-
-    // Update Redux
-    dispatch(addToCart(product));
-
-    // Trigger API call if user is logged in
-    if (user) {
-      addToCartByApi(product, existingItem ? existingItem.quantities + 1 : 1);
-    }
-  };
-
-  const increaseCount = (product: Product) => {
-    // Check if the product already exists in allItems
-    const existingItem = allItems.find(
-      (item) => item.productId === product.productId
-    );
-
-    const itemPrice = product.price;
-
-    let updatedItems;
-    if (existingItem) {
-      // If the product exists, increase quantity and update the total price
-      updatedItems = allItems.map((item) =>
-        item.productId === product.productId
-          ? {
-              ...item,
-              quantities: item.quantities + 1,
-              totalPrice: item.totalPrice + itemPrice,
-            }
-          : item
-      );
-    } else {
-      // If the product does not exist, add it to allItems
-      updatedItems = [
-        ...allItems,
-        {
+          name: product.name,
+          description: product.description || "",
+          price: product.price,
+          discountedPrice: product.discountedPrice || product.price,
           discountPercentage: product.discountPercentage || 0,
-          discountPrice: product.discountPrice || 0,
-          productId: product.productId,
-          names: product.name,
+          imageUrls: product.imageUrls || [],
+          rating: product.rating || 4.0,
+          stock: product.stock,
           quantities: 1,
-          prices: itemPrice,
-          totalPrice: itemPrice,
-          imageUrls: product.imageUrls,
-          rating: product.rating,
-        },
-      ];
-    }
-    // Update local state
-    setAllItems(updatedItems);
+          wishlistId: product.wishlistId || null,
+          variableNo: product.variableNo,
+        };
 
-    // Update Redux
-    dispatch(addToCart(product));
+        // REDUX UPDATE
+        if (type === "ADD" || type === "INCREASE")
+          dispatch(addToCart(productForCart));
+        if (type === "DECREASE") {
+          if (newQty <= 0) dispatch(deleteFromCart(product.productId));
+          else dispatch(removeFromCart(product.productId));
+        }
 
-    // Trigger API call if user is logged in
-    if (user) {
-      countApi(product, existingItem ? existingItem.quantities + 1 : 1);
-    }
-  };
-  const wishlistApi = useDebouncedCallback(
-    (product: Product, action: "add" | "remove") => {
-      const endpoint = action === "add" ? "/api/wishlist/" : "/api/wishlist/";
-
-      if (action === "add") {
-        axiosAuthInstance()
-          .post(endpoint, { product: { productId: product.productId } })
-          .catch((err) => {
-            toast.error(`Error adding in favorite.`);
+        // BACKEND CALL
+        if (type === "ADD" || type === "INCREASE") {
+          await axiosAuthInstance().post("/api/cart/add", {
+            products: { productId: product.productId },
+            quantity: 1,
           });
-      } else {
-        axiosAuthInstance()
-          .delete(endpoint, { params: { productId: product.productId } })
-          .catch((err) => {
-            console.log(err);
-          });
-      }
-    }
-  );
-
-  const [clickedId, setClickedId] = useState<string>("");
-  const handleClick = (id: string) => {
-    setClickedId(id);
-    setTimeout(() => {
-      setClickedId("");
-    }, 100);
-  };
-
-  const calculateDiscountPercent = (
-    price: number,
-    discountedPrice: number
-  ): number => {
-    if (!discountedPrice || price <= 0) return 0;
-    const discount = (discountedPrice / price) * 100;
-    return Math.round(discount);
-  };
-
-  const decreaseCount = (productId: string) => {
-    const existingItem = allItems.find((item) => item.productId === productId);
-
-    if (existingItem) {
-      if (existingItem.quantities === 1) {
-        // Remove the item completely if quantity is 1
-        setAllItems(allItems.filter((item) => item.productId !== productId));
-        dispatch(removeFromCart(productId));
-
-        // Call API to completely remove item
-        if (user) {
-          axiosAuthInstance()
-            .delete(`/api/cart/remove?productId=${existingItem.productId}`)
-            .catch((err) => {
-              // toast.error("Failed to Remove Item from Cart");
+        }
+        if (type === "DECREASE" && existingItem?.itemId) {
+          if (newQty > 0) {
+            await axiosAuthInstance().post("/api/cart/update", {
+              itemId: existingItem.itemId,
+              quantity: newQty,
             });
+          } else {
+            await axiosAuthInstance().delete("/api/cart/remove", {
+              params: { productId: product.productId },
+            });
+          }
         }
-      } else {
-        // Decrease quantity and update total price
-        const updatedItems = allItems.map((item) =>
-          item.productId === productId
-            ? {
-                ...item,
-                quantities: item.quantities - 1,
-                totalPrice: item.totalPrice - item.prices,
-              }
-            : item
+      } catch (error) {
+        console.error("Cart update error:", error);
+        toast.error("Failed to update cart. Please try again.");
+      }
+    };
+
+    // WISHLIST HANDLER
+    const toggleWishlist = async (product: any) => {
+      if (!user) return toast.info("Please log in first.");
+      const isLiked = wishlistItems.some(
+        (i) => i.productId === product.productId
+      );
+
+      try {
+        if (isLiked) {
+          dispatch(removeFromWishlist(product.productId));
+          await axiosAuthInstance().delete("/api/wishlist/", {
+            params: { productId: product.productId },
+          });
+          toast.success("Removed from wishlist");
+        } else {
+          dispatch(addToWishlist(product));
+          await axiosAuthInstance().post("/api/wishlist/", {
+            product: { productId: product.productId },
+          });
+          toast.success("Added to wishlist");
+        }
+      } catch {
+        toast.error("Failed to update wishlist.");
+      }
+    };
+
+    return { items, wishlistItems, updateCart, toggleWishlist };
+  };
+
+  interface ProductCardProps {
+    product: any;
+  }
+  // -----------------------------------------------
+  const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
+    const { items, wishlistItems, updateCart, toggleWishlist } =
+      useCartWishlist();
+
+    const cartItem = items.find((c) => c.productId === product.productId);
+    const qty = cartItem ? cartItem.quantities : 0;
+
+    // ---- FIXED DISCOUNT LOGIC ----
+    const discountAmount =
+      product.discountPercentage && product.discountPercentage > 0
+        ? (product.price * product.discountPercentage) / 100
+        : product.discountedPrice && product.discountedPrice < product.price
+        ? product.price - product.discountedPrice
+        : 0;
+
+    const priceAfterDiscount = product.price - discountAmount;
+    const totalPrice = qty * priceAfterDiscount;
+
+    const discountPercentDisplay =
+      product.discountPercentage && product.discountPercentage > 0
+        ? product.discountPercentage
+        : discountAmount > 0
+        ? Math.round((discountAmount / product.price) * 100)
+        : 0;
+
+    const renderStars = (rating: number) => {
+      const stars = [];
+      const fullStars = Math.floor(rating);
+      for (let i = 0; i < 5; i++) {
+        stars.push(
+          <IoStar
+            key={i}
+            className={`w-3 h-3 ${
+              i < fullStars ? "text-orange-400 fill-current" : "text-gray-300"
+            }`}
+          />
         );
-
-        setAllItems(updatedItems);
-        dispatch(removeFromCart(productId));
-
-        // Update backend with new quantity
-        if (user) {
-          // Correctly pass the Product object
-          countApi(
-            {
-              productId: existingItem.productId,
-              name: existingItem.names,
-              description: "", // Add description if available
-              price: existingItem.prices,
-              discountedPrice: 0, // Add discounted price if applicable
-              imageUrls: existingItem.imageUrls || [],
-              rating: null, // Add rating if available
-              wishlistId: existingItem.wishlistId || null,
-              cartId: existingItem.cartId,
-            },
-            existingItem.quantities - 1 // Updated quantity
-          );
-        }
       }
-    }
-  };
+      return stars;
+    };
 
-  const toggleWishlist = (product: Product, isAdded: boolean) => {
-    if (isAdded) {
-      // Remove from Wishlist
-      dispatch(removeFromWishlist(product.productId));
-      if (user) {
-        wishlistApi(product, "remove");
-      }
-    } else {
-      // Add to Wishlist
-      dispatch(addToWishlist(product));
-      if (user) {
-        wishlistApi(product, "add");
-      }
-    }
-  };
+    const isLiked = wishlistItems.some(
+      (i) => i.productId === product.productId
+    );
+
+    return (
+      <div className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-orange-100">
+        <Link
+          href={`/homepage/products/${product.productId}`}
+          className="block"
+        >
+          <div className="relative w-full aspect-square overflow-hidden bg-gray-50 h-40">
+            {product.imageUrls?.[0] ? (
+              <Image
+                src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}`}
+                alt={product.name}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <span className="text-gray-400">No Image</span>
+              </div>
+            )}
+
+            {discountPercentDisplay > 0 && (
+              <div className="absolute top-3 left-3">
+                <span className="bg-red-500 text-white px-3 py-1 text-xs font-bold rounded-md shadow-md">
+                  Save {discountPercentDisplay}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="p-4">
+            <h3 className="font-bold text-gray-900 line-clamp-2 leading-tight text-sm mb-1">
+              {product.name}
+            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-1">
+                <FaTag className="w-3 h-3 text-gray-400" />
+                <span className="text-xs font-medium text-gray-500 ml-1">
+                  {product.subcategoryName || "General"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {renderStars(product.rating || 4.0)}
+                <span className="text-xs text-gray-500 ml-1">
+                  ({(product.rating || 4.0).toFixed(1)})
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-gray-900">
+                Rs {Math.round(priceAfterDiscount)}
+              </span>
+              {discountAmount > 0 && (
+                <span className="text-sm text-gray-500 line-through">
+                  Rs {Math.round(product.price)}
+                </span>
+              )}
+            </div>
+          </div>
+        </Link>
+
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlist(product);
+          }}
+          className={`absolute top-3 right-3 p-2 rounded-full shadow-lg z-10 transition-all duration-200 ${
+            isLiked
+              ? "bg-red-500 text-white"
+              : "bg-white text-gray-600 hover:text-red-500"
+          }`}
+        >
+          <GoHeartFill className="text-lg" />
+        </button>
+
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-1 mb-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => updateCart(product, "DECREASE")}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              >
+                <RiSubtractFill className="w-4 h-4" />
+              </button>
+              <span className="w-8 text-center font-semibold text-gray-900">
+                {qty}
+              </span>
+              <button
+                onClick={() => updateCart(product, "INCREASE")}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              >
+                <IoMdAdd className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Total:</span>
+              <span className="text-base font-bold text-gray-900">
+                Rs {Math.round(totalPrice)}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => updateCart(product, "ADD")}
+            className="w-full py-3.5 rounded-xl font-semibold flex justify-center items-center gap-2 transition-all duration-200 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white shadow-sm hover:shadow-md"
+          >
+            <PiBagFill className="text-lg" /> Add To Cart
+          </button>
+        </div>
+      </div>
+    );
+  });
 
   const router = useRouter();
 
@@ -360,7 +384,7 @@ const Categories = () => {
           .filter(
             (category) =>
               products.filter(
-                (product) => product.category === category.categoryId
+                (product) => (product as any).category === category.categoryId
               ).length >= 5
           )
           .map((category, index) => (
@@ -389,234 +413,16 @@ const Categories = () => {
                 <Carousel>
                   <CarouselContent className="sm:pl-6 pl-3 pb-2">
                     {products
-                      .filter((p) => p.category === category.categoryId)
+                      .filter(
+                        (p) => (p as any).category === category.categoryId
+                      )
                       .map((filteredProduct, index) => {
-                        const item = items.find(
-                          (item) => item.productId === filteredProduct.productId
-                        );
-                        const isAddedInWishlist = wishlistItems.find(
-                          (item) => item.productId == filteredProduct.productId
-                        );
-
                         return (
                           <CarouselItem
                             key={index}
                             className="basis-1/2 sm:basis-1/3 md:basis-1/3 lg:basis-1/4 xl:basis-1/5 pl-2 "
                           >
-                            <Link
-                              href={`/homepage/products/${filteredProduct.productId}`}
-                            >
-                              <div className="p-1 sm:p-2 md:p-3 rounded-lg hover:bg-[#0037c8]/15 transition-shadow group shadow-md border sm:w-[230px] w-auto">
-                                <div className="relative w-full">
-                                  <div className="cursor-pointer">
-                                    {((filteredProduct.discountedPrice > 0 &&
-                                      filteredProduct.price >
-                                        filteredProduct.discountedPrice) ||
-                                      filteredProduct.discountPercentage >
-                                        0) && (
-                                      <div className="absolute sm:-top-1 top-1 -left-1 sm:-left-3 z-10">
-                                        <h1 className="text-xs px-2 py-1 bg-red-500 text-white font-semibold rounded-r-full text-start">
-                                          {filteredProduct.discountPercentage
-                                            ? `${filteredProduct.discountPercentage}% OFF`
-                                            : `${calculateDiscountPercent(
-                                                filteredProduct.price,
-                                                filteredProduct.discountedPrice
-                                              )}% OFF`}
-                                        </h1>
-                                      </div>
-                                    )}
-                                    <div className="relative w-full aspect-square sm:h-[170px] h-auto">
-                                      <Image
-                                        src={
-                                          `${NEXT_PUBLIC_CLOUDINARY_URL}${filteredProduct?.imageUrls?.[0]}` ||
-                                          "/product.png"
-                                        }
-                                        alt={
-                                          filteredProduct.name ||
-                                          "Product image"
-                                        }
-                                        className="object-cover w-full h-full rounded-md "
-                                        fill
-                                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                      />
-                                    </div>
-                                    <div className="absolute top-1 right-1 sm:-top-1 sm:-right-1 z-10">
-                                      {user ? (
-                                        <Button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            toggleWishlist(
-                                              filteredProduct,
-                                              isAddedInWishlist != undefined
-                                            );
-                                            handleClick(
-                                              filteredProduct.productId
-                                            );
-                                          }}
-                                          className={`text-sm sm:text-xl  z-10 bg-white pt-0 h-6 sm:h-8 p-1 sm:p-2 rounded-full border transition-all  text-white hover:bg-gray-200 ${
-                                            isAddedInWishlist
-                                              ? "text-[#0037c8]"
-                                              : "text-gray-400"
-                                          }`}
-                                        >
-                                          <GoHeartFill />
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setIsLoginModalOpen(true);
-                                          }}
-                                          className={`text-sm sm:text-xl  z-10 bg-white pt-0 h-6 sm:h-8 p-1 sm:p-2 rounded-full border transition-all   hover:text-[#0037c8] hover:bg-gray-200 text-gray-400 `}
-                                        >
-                                          <GoHeartFill />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="mt-3 flex flex-col gap-1 justify-between">
-                                    <h2 className="mt-1 text-xs sm:text-sm md:text-base  text-primary-btn truncate font-semibold ">
-                                      {filteredProduct.name}
-                                    </h2>
-                                    <div className="flex items-baseline">
-                                      <span className="price ">
-                                        Rs.
-                                        {(
-                                          filteredProduct?.price -
-                                          (filteredProduct.discountPercentage
-                                            ? (filteredProduct?.price *
-                                                (filteredProduct?.discountPercentage ??
-                                                  0)) /
-                                              100
-                                            : filteredProduct?.discountedPrice)
-                                        ).toFixed(0)}
-                                      </span>
-                                      {(filteredProduct.discountedPrice > 0 ||
-                                        filteredProduct.discountPercentage >
-                                          0) && (
-                                        <span className="text-xs sm:text-sm text-gray-500 line-through ml-1 sm:ml-2">
-                                          Rs.
-                                          {(filteredProduct?.price).toFixed(0)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center justify-end ">
-                                  {/* Stock Section */}
-                                  {/* <div className="border border-gray-300 rounded-sm py-0.5 px-1.5 flex items-center gap-1">
-                                    <p
-                                      className={`text-sm font-medium ${
-                                        filteredProduct?.stock || 0 > 0
-                                          ? "text-blue-600 font-semibold"
-                                          : "text-gray-400 font-semibold"
-                                      }`}
-                                    >
-                                      {filteredProduct?.stock || 0}
-                                    </p>
-                                    <p className="text-gray-500">stocks</p>
-                                  </div> */}
-                                  {/* Rating Section */}
-                                  <div className="flex items-center  py-0.5 px-1.5 gap-0.5">
-                                    {filteredProduct?.rating &&
-                                    filteredProduct.rating > 0 ? (
-                                      <span className="ml-1 text-sm text-gray-700 font-medium">
-                                        {filteredProduct?.rating?.toFixed(1) ||
-                                          0}
-                                      </span>
-                                    ) : (
-                                      <BsDash className="text-gray-400 text-xl" />
-                                    )}
-
-                                    <MdOutlineStar className="text-yellow-500 text-xl" />
-                                  </div>
-                                </div>
-
-                                {/* Add to cart section */}
-                                <div className="flex items-center sm:mt-1 pb-1 sm:pb-2">
-                                  <div className="ml-auto w-full flex   justify-center h-8 sm:h-10 ">
-                                    {item && item?.quantities > 0 ? (
-                                      <div className="flex  rounded-full">
-                                        <Button
-                                          className="p-1 text-xs sm:text-sm border-r  rounded-lg rounded-r-none pl-2 sm:pl-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            decreaseCount(
-                                              filteredProduct.productId
-                                            );
-                                          }}
-                                        >
-                                          <RiSubtractFill className="w-6 h-6 sm:w-4 sm:h-4 text-white" />
-                                        </Button>
-                                        <span
-                                          className={cn(
-                                            buttonVariants({
-                                              variant: "default",
-                                            }),
-                                            "px-1 sm:px-2 w-10 sm:w-16 text-xs sm:text-base rounded-none border-none h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  flex items-center justify-center "
-                                          )}
-                                        >
-                                          {item.quantities}
-                                        </span>
-                                        <Button
-                                          className="p-1 text-xs sm:text-sm  rounded-lg rounded-l-none border-l pr-2 sm:pr-3 h-8 sm:h-auto bg-[#0037c8] hover:bg-[#0037c8]/80  sm:w-16 w-12"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            increaseCount(filteredProduct);
-                                          }}
-                                          disabled={
-                                            item?.quantities >=
-                                            (filteredProduct?.stock || 1)
-                                          }
-                                        >
-                                          <IoMdAdd />
-                                        </Button>
-                                      </div>
-                                    ) : (filteredProduct?.stock ?? 0) > 0 ? (
-                                      user ? (
-                                        <Button
-                                          variant={"default"}
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            addtoCartByown(filteredProduct);
-                                          }}
-                                          className="border rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                                        >
-                                          Add to cart
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          variant={"default"}
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setIsLoginModalOpen(true);
-                                          }}
-                                          className="border  rounded-lg h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm md:text-base   w-full"
-                                        >
-                                          Add to cart
-                                        </Button>
-                                      )
-                                    ) : (
-                                      <Button
-                                        variant={"default"}
-                                        disabled
-                                        className="border border-muted-foreground  rounded-lg h-10 px-4"
-                                      >
-                                        Out of Stock
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>{" "}
-                            </Link>
+                            <ProductCard product={filteredProduct} />
                           </CarouselItem>
                         );
                       })}

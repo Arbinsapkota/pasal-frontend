@@ -1,4 +1,3 @@
-// import { Product } from "@/utils/products";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface Product {
@@ -14,18 +13,10 @@ export interface Product {
   cartId?: string | null;
   rating: number | null;
   wishlistId: string | null;
-  superCategory?: string;
-  superCategoryName?: string;
-  category?: string;
-  categoryName?: string;
   stock?: number;
   quantities: number;
-  subcategory?: string;
-  subcategoryName?: string;
-  labelImgUrl?: string;
   discountPrice?: number;
   variableNo?: string;
-  vendorId?: string;
 }
 
 export interface CartItem {
@@ -40,12 +31,10 @@ export interface CartItem {
   stock?: number;
   totalPrice: number;
   imageUrls: string[] | null;
-  wishlistId?: string;
-  rating: number | null; // Add the rating property
-  variableNo?: string; // Add variableNo property
-
-  // discountedPrice?: number | undefined;
+  rating: number | null;
+  variableNo?: string;
 }
+
 export interface CartState {
   items: CartItem[];
 }
@@ -53,46 +42,50 @@ export interface CartState {
 const initialState: CartState = {
   items: [],
 };
+
 const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
+    // ✅ ADD / INCREASE ONLY (+1)
     addToCart(state, action: PayloadAction<Product>) {
       const newItem = action.payload;
 
       const existingItem = state.items.find(
-        item => item.productId === newItem.productId && item.variableNo === (newItem as any).variableNo
+        item =>
+          item.productId === newItem.productId &&
+          item.variableNo === newItem.variableNo
       );
 
-      const itemPrice = newItem.price;
+      const unitPrice =
+        newItem.price -
+        (newItem.discountPercentage
+          ? (newItem.price * newItem.discountPercentage) / 100
+          : newItem.discountPrice || 0);
 
       if (existingItem) {
-        existingItem.quantities++;
-        existingItem.totalPrice += itemPrice;
+        existingItem.quantities += 1;
+        existingItem.totalPrice = existingItem.quantities * unitPrice;
         if (newItem.itemId) existingItem.itemId = newItem.itemId;
-        if ((newItem as any).variableNo) existingItem.variableNo = (newItem as any).variableNo;
       } else {
         state.items.push({
           discountPercentage: newItem.discountPercentage,
-          discountPrice: newItem?.discountPrice ?? 0,
+          discountPrice: newItem.discountPrice ?? 0,
           productId: newItem.productId,
           names: newItem.name,
           quantities: 1,
-          prices:
-            itemPrice -
-            (newItem.discountPercentage
-              ? (newItem.price * newItem.discountPercentage) / 100
-              : newItem.discountPrice || 0),
-          totalPrice: itemPrice,
+          prices: unitPrice,
+          totalPrice: unitPrice,
           imageUrls: newItem.imageUrls?.length ? [newItem.imageUrls[0]] : [],
           itemId: newItem.itemId,
           rating: newItem.rating,
-          stock: newItem?.stock,
-          variableNo: (newItem as any).variableNo,
+          stock: newItem.stock,
+          variableNo: newItem.variableNo,
         });
       }
     },
 
+    // ✅ DECREASE ONLY (-1)
     removeFromCart(state, action: PayloadAction<string>) {
       const productId = action.payload;
 
@@ -100,28 +93,46 @@ const cartSlice = createSlice({
         item => item.productId === productId
       );
 
-      if (existingItem) {
-        if (existingItem.quantities === 1) {
-          state.items = state.items.filter(
-            item => item.productId !== productId
-          );
-        } else {
-          existingItem.quantities--;
-          existingItem.totalPrice -= existingItem.prices;
-        }
+      if (!existingItem) return;
+
+      if (existingItem.quantities === 1) {
+        state.items = state.items.filter(
+          item => item.productId !== productId
+        );
+      } else {
+        existingItem.quantities -= 1;
+        existingItem.totalPrice =
+          existingItem.quantities * existingItem.prices;
       }
     },
 
-    deleteFromCart(state, action: PayloadAction<string>) {
-      const productId = action.payload;
+    // ✅ SET EXACT QUANTITY (for backend sync)
+    setQuantity(
+      state,
+      action: PayloadAction<{ productId: string; quantity: number }>
+    ) {
+      const { productId, quantity } = action.payload;
 
       const existingItem = state.items.find(
         item => item.productId === productId
       );
 
-      if (existingItem) {
-        state.items = state.items.filter(item => item.productId !== productId);
+      if (!existingItem) return;
+
+      if (quantity <= 0) {
+        state.items = state.items.filter(
+          item => item.productId !== productId
+        );
+      } else {
+        existingItem.quantities = quantity;
+        existingItem.totalPrice = quantity * existingItem.prices;
       }
+    },
+
+    deleteFromCart(state, action: PayloadAction<string>) {
+      state.items = state.items.filter(
+        item => item.productId !== action.payload
+      );
     },
 
     setCartData(state, action: PayloadAction<CartItem[]>) {
@@ -137,8 +148,10 @@ const cartSlice = createSlice({
 export const {
   addToCart,
   removeFromCart,
-  setCartData,
+  setQuantity,
   deleteFromCart,
+  setCartData,
   clearCart,
 } = cartSlice.actions;
+
 export default cartSlice.reducer;
