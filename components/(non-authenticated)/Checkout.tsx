@@ -798,53 +798,52 @@ const Checkout: React.FC = () => {
         )}
 
         <div className="bg-white p-4 rounded-md border shadow-sm">
-  <h2 className="text-xl font-semibold mb-3">Order Summary </h2>
+  <h2 className="text-xl font-semibold mb-3">Order Summary</h2>
+
   {checkoutItems.length === 0 ? (
     <p>No items in the checkout.</p>
   ) : (
     <div className="grid lg:grid-cols-2 max-h-[16rem] overflow-y-auto scrollbar-thin gap-2">
-      {checkoutItems.map(item => (
-        <div key={item.productId} className="flex items-center mb-4">
-          <Image
-            src={`${NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrl}`}
-            alt={item.name || "pic"}
-            width={200}
-            height={200}
-            style={{ objectFit: "cover" }}
-            className="rounded h-20 w-20"
-          />
-          <div className="ml-4">
-            <p className="font-medium text-wrap">{item.name}</p>
-            <p>Quantity: {item.quantity}</p>
-            <p className="sm:text-sm text-xs text-gray-500 text-red-500">
-              Discount: Rs.
-              {(
-                item.discountPercentage
-                  ? (item.price * item.discountPercentage) / 100 * item.quantity
-                  : item.discountPrice * item.quantity
-              ).toFixed(2)}
-            </p>
-            <div>
+      {checkoutItems.map(item => {
+        // ---- FIXED PER ITEM DISCOUNT ----
+        const perItemDiscount = item.discountPercentage
+          ? (item.price * item.discountPercentage) / 100
+          : item.discountPrice || 0;
+
+        const priceAfterDiscount = item.price - perItemDiscount;
+
+        return (
+          <div key={item.productId} className="flex items-center mb-4">
+            <Image
+              src={`${NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrl}`}
+              alt={item.name || "pic"}
+              width={200}
+              height={200}
+              style={{ objectFit: "cover" }}
+              className="rounded h-20 w-20"
+            />
+            <div className="ml-4">
+              <p className="font-medium text-wrap">{item.name}</p>
+              <p>Quantity: {item.quantity}</p>
+              {perItemDiscount > 0 && (
+                <p className="sm:text-sm text-xs text-gray-500 text-red-500">
+                  Discount: Rs. {(perItemDiscount * item.quantity).toFixed(0)}
+                </p>
+              )}
               <p className="text-primaryBlue sm:text-lg text-sm font-semibold">
-                Rs.
-                {(
-                  (item.price - (item.discountPercentage
-                    ? (item.price * item.discountPercentage) / 100
-                    : item.discountPrice)) * item.quantity
-                ).toFixed(2)}
+                Rs. {(priceAfterDiscount * item.quantity).toFixed(0)}
               </p>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   )}
 
-  <div>
-    <div>
-      <p className="text-primaryBlue font-semibold">Coupon Code</p>
-    </div>
-    <div className="flex gap-2 items-center">
+  {/* Coupon Code Section */}
+  <div className="mt-4">
+    <p className="text-primaryBlue font-semibold">Coupon Code</p>
+    <div className="flex gap-2 items-center mt-1">
       <input
         type="text"
         name="discountCode"
@@ -857,67 +856,66 @@ const Checkout: React.FC = () => {
     </div>
   </div>
 
-  <p className="text-lg mt-1">
+  {/* Subtotal */}
+  <p className="text-lg mt-2">
     Subtotal: Rs.
     {checkoutItems
-      .reduce((sum, item) => sum + item.price * item.quantity, 0)
-      .toFixed(2)}
-  </p>
-  <p className="text-lg mt-1 font-semibold text-red-500">
-    Coupon Discount: Rs. {discountValue.toFixed(2)}
+      .reduce((sum, item) => {
+        const perItemDiscount = item.discountPercentage
+          ? (item.price * item.discountPercentage) / 100
+          : item.discountPrice || 0;
+        return sum + (item.price - perItemDiscount) * item.quantity;
+      }, 0)
+      .toFixed(0)}
   </p>
 
+  {/* Coupon Discount */}
+  <p className="text-lg mt-1 font-semibold text-red-500">
+    Coupon Discount: Rs. {discountValue.toFixed(0)}
+  </p>
+
+  {/* Delivery Info */}
   {selectedDelivery && (
-    <p className="text-green-600">
-      Delivery Charge: Rs.
-      {
-        deliveryOption.find(item => item.optionId === selectedDelivery)
-          ?.charge
-      }
-    </p>
-  )}
-  {selectedDelivery && (
-    <p>
-      Description:{" "}
-      <span>
-        {
-          deliveryOption.find(
-            item => item.optionId === selectedDelivery
-          )?.description
-        }
-      </span>
-    </p>
-  )}
-  {selectedDelivery && (
-    <p>
-      Delivery Duration:{" "}
-      <span>
-        {
-          deliveryOption.find(
-            item => item.optionId === selectedDelivery
-          )?.deliveryDays
-        }
-        {deliveryOption.find(item => item.optionId === selectedDelivery)
-          ?.deliveryDays === 1
-          ? " day"
-          : " days"}
-      </span>
-    </p>
+    <>
+      <p className="text-green-600">
+        Delivery Charge: Rs.
+        {deliveryOption.find(item => item.optionId === selectedDelivery)?.charge || 0}
+      </p>
+      <p>
+        Description:{" "}
+        <span>
+          {deliveryOption.find(item => item.optionId === selectedDelivery)?.description || "-"}
+        </span>
+      </p>
+      <p>
+        Delivery Duration:{" "}
+        <span>
+          {deliveryOption.find(item => item.optionId === selectedDelivery)?.deliveryDays || 0}
+          {deliveryOption.find(item => item.optionId === selectedDelivery)?.deliveryDays === 1
+            ? " day"
+            : " days"}
+        </span>
+      </p>
+    </>
   )}
 
   <p className="w-full border-b-2 mt-2 border-gray-300"></p>
+
+  {/* Total */}
   <p className="font-bold text-lg mt-2">
     Total: Rs.
     {(
       checkoutItems.reduce((sum, item) => {
-        const discountAmount = item.discountPercentage
+        const perItemDiscount = item.discountPercentage
           ? (item.price * item.discountPercentage) / 100
-          : item.discountPrice;
-        return sum + (item.price - discountAmount) * item.quantity;
-      }, 0) + (selectedDelivery
+          : item.discountPrice || 0;
+        return sum + (item.price - perItemDiscount) * item.quantity;
+      }, 0) +
+      (selectedDelivery
         ? deliveryOption.find(item => item.optionId === selectedDelivery)?.charge || 0
-        : 0) - discountValue
-    ).toFixed(2)}
+        : 0) -
+      discountValue
+    ).toFixed(0)}
   </p>
 
   <Button
@@ -929,6 +927,7 @@ const Checkout: React.FC = () => {
     {isSubmitting ? "Submitting..." : "Place Order"}
   </Button>
 </div>
+
 
 
         <div></div>

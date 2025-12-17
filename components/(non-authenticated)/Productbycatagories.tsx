@@ -11,19 +11,25 @@ import {
 import { useCart } from "@/hooks/useCart";
 import { capitalizeFirstLetter } from "@/lib/capital";
 import { cn } from "@/lib/utils";
-import { CartItem, Product } from "@/redux/slices/cartSlice";
+import {
+  addToCart,
+  CartItem,
+  deleteFromCart,
+  Product,
+  removeFromCart,
+} from "@/redux/slices/cartSlice";
 import { RootState } from "@/redux/store";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { use, useEffect, useState } from "react";
+import React, { memo, use, useEffect, useState } from "react";
 import { BsDash } from "react-icons/bs";
-import { FaAngleRight, FaChevronLeft } from "react-icons/fa";
+import { FaAngleRight, FaChevronLeft, FaTag } from "react-icons/fa";
 import { GoHeartFill } from "react-icons/go";
 import { IoMdAdd, IoMdClose } from "react-icons/io";
 import { MdOutlineMenuOpen, MdOutlineStar } from "react-icons/md";
 import { RiMenuFold2Fill, RiSubtractFill } from "react-icons/ri";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getUserFromCookies } from "../cookie/cookie";
 import ProductCardLoading from "../loaidng/ProductLoading";
 import { useModal } from "../providers/ModalStateProvider";
@@ -31,6 +37,14 @@ import { Button, buttonVariants } from "../ui/button";
 import CategoriesBanner from "./CategoriesBanner";
 import ProductsSidebar from "./ProductsSidebar";
 import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
+import { toast } from "react-toastify";
+import { axiosAuthInstance } from "../axiosInstance";
+import {
+  addToWishlist,
+  removeFromWishlist,
+} from "@/redux/slices/wishlistSlice";
+import { IoStar } from "react-icons/io5";
+import { PiBagFill } from "react-icons/pi";
 
 // Helper utility to calculate discount percentage
 const getDiscountPercent = (price: number, discountedPrice: number): number => {
@@ -106,7 +120,273 @@ const ProductbyCategories: React.FC = () => {
       setClickedId("");
     }, 100);
   };
+  const useCartWishlist = () => {
+    const dispatch = useDispatch();
+    const items = useSelector((state: RootState) => state.cart.items);
+    const wishlistItems = useSelector(
+      (state: RootState) => state.wishlist.items
+    );
+    const user = getUserFromCookies();
 
+    // CART HANDLER
+    const updateCart = async (
+      product: any,
+      type: "ADD" | "INCREASE" | "DECREASE"
+    ) => {
+      if (!user) return toast.info("Please log in to manage your cart.");
+      if (product.stock === 0) return toast.error("Product is out of stock!");
+
+      const existingItem = items.find((i) => i.productId === product.productId);
+      const currentQty = existingItem?.quantities || 0;
+      const newQty =
+        type === "ADD"
+          ? 1
+          : type === "INCREASE"
+          ? currentQty + 1
+          : currentQty - 1;
+
+      if (newQty > product.stock)
+        return toast.error(`Only ${product.stock} items available!`);
+
+      try {
+        const productForCart = {
+          productId: product.productId,
+          name: product.name,
+          description: product.description || "",
+          price: product.price,
+          discountedPrice: product.discountedPrice || product.price,
+          discountPercentage: product.discountPercentage || 0,
+          imageUrls: product.imageUrls || [],
+          rating: product.rating || 4.0,
+          stock: product.stock,
+          quantities: 1,
+          wishlistId: product.wishlistId || null,
+          variableNo: product.variableNo,
+        };
+
+        // REDUX UPDATE
+        if (type === "ADD" || type === "INCREASE")
+          dispatch(addToCart(productForCart));
+        if (type === "DECREASE") {
+          if (newQty <= 0) dispatch(deleteFromCart(product.productId));
+          else dispatch(removeFromCart(product.productId));
+        }
+
+        // BACKEND CALL
+        if (type === "ADD" || type === "INCREASE") {
+          await axiosAuthInstance().post("/api/cart/add", {
+            products: { productId: product.productId },
+            quantity: 1,
+          });
+        }
+        if (type === "DECREASE" && existingItem?.itemId) {
+          if (newQty > 0) {
+            await axiosAuthInstance().post("/api/cart/update", {
+              itemId: existingItem.itemId,
+              quantity: newQty,
+            });
+          } else {
+            await axiosAuthInstance().delete("/api/cart/remove", {
+              params: { productId: product.productId },
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Cart update error:", error);
+        toast.error("Failed to update cart. Please try again.");
+      }
+    };
+
+    // WISHLIST HANDLER
+    const toggleWishlist = async (product: any) => {
+      if (!user) return toast.info("Please log in first.");
+      const isLiked = wishlistItems.some(
+        (i) => i.productId === product.productId
+      );
+
+      try {
+        if (isLiked) {
+          dispatch(removeFromWishlist(product.productId));
+          await axiosAuthInstance().delete("/api/wishlist/", {
+            params: { productId: product.productId },
+          });
+          toast.success("Removed from wishlist");
+        } else {
+          dispatch(addToWishlist(product));
+          await axiosAuthInstance().post("/api/wishlist/", {
+            product: { productId: product.productId },
+          });
+          toast.success("Added to wishlist");
+        }
+      } catch {
+        toast.error("Failed to update wishlist.");
+      }
+    };
+
+    return { items, wishlistItems, updateCart, toggleWishlist };
+  };
+
+  interface ProductCardProps {
+    product: any;
+  }
+  // -----------------------------------------------
+  const ProductCard: React.FC<ProductCardProps> = memo(({ product }) => {
+    const { items, wishlistItems, updateCart, toggleWishlist } =
+      useCartWishlist();
+
+    const cartItem = items.find((c) => c.productId === product.productId);
+    const qty = cartItem ? cartItem.quantities : 0;
+
+    // ---- FIXED DISCOUNT LOGIC ----
+    const discountAmount =
+      product.discountPercentage && product.discountPercentage > 0
+        ? (product.price * product.discountPercentage) / 100
+        : product.discountedPrice && product.discountedPrice < product.price
+        ? product.price - product.discountedPrice
+        : 0;
+
+    const priceAfterDiscount = product.price - discountAmount;
+    const totalPrice = qty * priceAfterDiscount;
+
+    const discountPercentDisplay =
+      product.discountPercentage && product.discountPercentage > 0
+        ? product.discountPercentage
+        : discountAmount > 0
+        ? Math.round((discountAmount / product.price) * 100)
+        : 0;
+
+    const renderStars = (rating: number) => {
+      const stars = [];
+      const fullStars = Math.floor(rating);
+      for (let i = 0; i < 5; i++) {
+        stars.push(
+          <IoStar
+            key={i}
+            className={`w-3 h-3 ${
+              i < fullStars ? "text-orange-400 fill-current" : "text-gray-300"
+            }`}
+          />
+        );
+      }
+      return stars;
+    };
+
+    const isLiked = wishlistItems.some(
+      (i) => i.productId === product.productId
+    );
+
+    return (
+      <div className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-orange-100">
+        <Link
+          href={`/homepage/products/${product.productId}`}
+          className="block"
+        >
+          <div className="relative w-full aspect-square overflow-hidden bg-gray-50 h-40">
+            {product.imageUrls?.[0] ? (
+              <Image
+                src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product.imageUrls[0]}`}
+                alt={product.name}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <span className="text-gray-400">No Image</span>
+              </div>
+            )}
+
+            {discountPercentDisplay > 0 && (
+              <div className="absolute top-3 left-3">
+                <span className="bg-red-500 text-white px-3 py-1 text-xs font-bold rounded-md shadow-md">
+                  Save {discountPercentDisplay}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="p-4">
+            <h3 className="font-bold text-gray-900 line-clamp-2 leading-tight text-sm mb-1">
+              {product.name}
+            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-1">
+                <FaTag className="w-3 h-3 text-gray-400" />
+                <span className="text-xs font-medium text-gray-500 ml-1">
+                  {product.subcategoryName || "General"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {renderStars(product.rating || 4.0)}
+                <span className="text-xs text-gray-500 ml-1">
+                  ({(product.rating || 4.0).toFixed(1)})
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-gray-900">
+                Rs {Math.round(priceAfterDiscount)}
+              </span>
+              {discountAmount > 0 && (
+                <span className="text-sm text-gray-500 line-through">
+                  Rs {Math.round(product.price)}
+                </span>
+              )}
+            </div>
+          </div>
+        </Link>
+
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlist(product);
+          }}
+          className={`absolute top-3 right-3 p-2 rounded-full shadow-lg z-10 transition-all duration-200 ${
+            isLiked
+              ? "bg-red-500 text-white"
+              : "bg-white text-gray-600 hover:text-red-500"
+          }`}
+        >
+          <GoHeartFill className="text-lg" />
+        </button>
+
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-1 mb-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => updateCart(product, "DECREASE")}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              >
+                <RiSubtractFill className="w-4 h-4" />
+              </button>
+              <span className="w-8 text-center font-semibold text-gray-900">
+                {qty}
+              </span>
+              <button
+                onClick={() => updateCart(product, "INCREASE")}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+              >
+                <IoMdAdd className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Total:</span>
+              <span className="text-base font-bold text-gray-900">
+                Rs {Math.round(totalPrice)}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => updateCart(product, "ADD")}
+            className="w-full py-3.5 rounded-xl font-semibold flex justify-center items-center gap-2 transition-all duration-200 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white shadow-sm hover:shadow-md"
+          >
+            <PiBagFill className="text-lg" /> Add To Cart
+          </button>
+        </div>
+      </div>
+    );
+  });
   const router = useRouter();
   const [selectedCategoryId, setSelectedCategoryId] = useState<
     string | undefined
@@ -183,167 +463,11 @@ const ProductbyCategories: React.FC = () => {
     setActiveFilters([]);
   };
 
-  // Refined Product Card Component
-  const ProductCard = ({
-    product,
-    item,
-    isInWishlist,
-  }: {
-    product: Product;
-    item: CartItem | undefined;
-    isInWishlist: boolean;
-  }) => {
-    const isDiscounted =
-      product.discountedPrice > 0 && product.price > product.discountedPrice;
-    const finalPrice = isDiscounted ? product.discountedPrice : product.price;
-    const discountPercent =
-      product.discountPercentage > 0
-        ? product.discountPercentage
-        : isDiscounted
-        ? getDiscountPercent(product.price, product.discountedPrice)
-        : 0;
-
-    return (
-      <Link
-        href={`/homepage/products/${product.productId}`}
-        className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 block border border-gray-100 hover:border-orange-100"
-      >
-        {/* IMAGE CONTAINER */}
-        <div className="relative w-full h-48 overflow-hidden bg-gray-50">
-          <Image
-            src={
-              `${NEXT_PUBLIC_CLOUDINARY_URL}${product?.imageUrls[0]}` ||
-              "/placeholder.png"
-            }
-            alt={product.name || "Product image"}
-            fill
-            className="object-contain group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-          />
-
-          {/* DISCOUNT BADGE */}
-          {discountPercent > 0 && (
-            <div className="absolute top-3 left-3">
-              <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg">
-                {discountPercent}% OFF
-              </span>
-            </div>
-          )}
-
-          {/* WISHLIST BUTTON */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (user) {
-                toggleWishlist(product, isInWishlist);
-                handleClick(product.productId);
-              } else {
-                setIsLoginModalOpen(true);
-              }
-            }}
-            className={`absolute top-3 right-3 p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-200 ${
-              isInWishlist
-                ? "bg-red-500 text-white"
-                : "bg-white/80 text-gray-600 hover:bg-white hover:text-red-500"
-            }`}
-          >
-            <GoHeartFill className="text-lg" />
-          </button>
-        </div>
-
-        {/* CONTENT */}
-        <div className="p-4">
-          {/* CATEGORY & RATING */}
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-orange-600 font-medium text-sm">
-              {product.categoryName || "Category"}
-            </span>
-          </div>
-
-          {/* PRODUCT NAME */}
-          <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight group-hover:text-orange-700 transition-colors mb-2">
-            {capitalizeFirstLetter(product.name || "")}
-          </h3>
-
-          {/* PRICE SECTION */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg font-bold text-gray-900">
-              Rs.{finalPrice.toFixed(0)}
-            </span>
-            {isDiscounted && (
-              <span className="text-sm text-gray-500 line-through">
-                Rs.{product.price.toFixed(0)}
-              </span>
-            )}
-          </div>
-
-          {/* ADD TO CART / QUANTITY CONTROLS */}
-          {item && item.quantities > 0 ? (
-            <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  decreaseCount(product.productId);
-                }}
-                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors"
-              >
-                <RiSubtractFill className="text-lg" />
-              </button>
-
-              <span className="font-bold text-orange-700 min-w-[20px] text-center">
-                {item.quantities}
-              </span>
-
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  increaseCount(product);
-                }}
-                disabled={item.quantities >= (product?.stock || 1)}
-                className="text-orange-600 hover:text-orange-700 p-1 rounded-full hover:bg-orange-100 transition-colors disabled:opacity-50"
-              >
-                <IoMdAdd className="text-lg" />
-              </button>
-            </div>
-          ) : (product?.stock ?? 0) > 0 ? (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (user) {
-                  addtoCartByown(product);
-                } else {
-                  setIsLoginModalOpen(true);
-                }
-              }}
-              className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold py-3 rounded-xl flex justify-center items-center gap-2 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                <path d="M18 6h-2c0-2.206-1.794-4-4-4S8 3.794 8 6H6C3.794 6 2 7.794 2 10v10c0 2.206 1.794 4 4 4h12c2.206 0 4-1.794 4-4V10c0-2.206-1.794-4-4-4zM10 6c0-1.103.897-2 2-2s2 .897 2 2h-4zm10 14c0 1.103-.897 2-2 2H6c-1.103 0-2-.897-2-2V10c0-1.103.897-2 2-2h12c1.103 0 2 .897 2 2v10z" />
-              </svg>
-              Add to Cart
-            </button>
-          ) : (
-            <button
-              disabled
-              className="w-full bg-gray-200 text-gray-500 font-semibold py-3 rounded-xl flex justify-center items-center gap-2 transition-all duration-200"
-            >
-              Out of Stock
-            </button>
-          )}
-        </div>
-      </Link>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 mt-10">
       <div className="flex w-full relative">
         {/* Sidebar */}
-        <div>
+        
           <ProductsSidebar
             selectedSubCategory={selectedSubCategory}
             setSelectedSubCategory={setSelectedSubCategory}
@@ -363,8 +487,7 @@ const ProductbyCategories: React.FC = () => {
             isSidebarOpen={isSidebarOpen}
             setIsSidebarOpen={setIsSidebarOpen}
           />
-        </div>
-
+        
         {/* Main Content */}
         <div className={`flex-1 ${isSidebarOpen ? "sm:pl-64" : ""} w-full`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -389,7 +512,7 @@ const ProductbyCategories: React.FC = () => {
             {/* ACTIVE FILTERS SECTION */}
             {(selectedSubCategoryDetails.length > 0 ||
               activeFilters.length > 0) && (
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-8 mt-14">
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-8">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="text-gray-700 font-medium text-sm">
                     Active Filters:
@@ -460,14 +583,7 @@ const ProductbyCategories: React.FC = () => {
                     const isInWishlist = wishlistItems.some(
                       (item: any) => item.productId === product.productId
                     );
-                    return (
-                      <ProductCard
-                        key={product.productId}
-                        product={product}
-                        item={item}
-                        isInWishlist={isInWishlist}
-                      />
-                    );
+                    return <ProductCard product={product} />;
                   })}
                 </div>
               ) : (
@@ -507,14 +623,7 @@ const ProductbyCategories: React.FC = () => {
                     const isInWishlist = wishlistItems.some(
                       (item: any) => item.productId === product.productId
                     );
-                    return (
-                      <ProductCard
-                        key={product.productId}
-                        product={product}
-                        item={item}
-                        isInWishlist={isInWishlist}
-                      />
-                    );
+                    return <ProductCard product={product} />;
                   })}
                 </div>
 

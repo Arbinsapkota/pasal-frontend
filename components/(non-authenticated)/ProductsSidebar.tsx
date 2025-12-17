@@ -61,7 +61,8 @@ interface CategoryStates {
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const ProductsSidebar = ({
+const 
+ProductsSidebar = ({
   selectedSubCategory,
   setSelectedSubCategory,
   categories,

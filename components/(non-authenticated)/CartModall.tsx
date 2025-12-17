@@ -36,247 +36,255 @@ import { GrFormSubtract } from "react-icons/gr";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { NEXT_PUBLIC_CLOUDINARY_URL } from "../env";
 
+/* ===================== HELPERS ===================== */
+const round2 = (num: number) => Math.round(num * 100) / 100;
+
+/* ===================== COMPONENT ===================== */
 const CartModal: React.FC = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const { setIsLoginModalOpen } = useModal();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const items = useSelector((state: RootState) => state.cart.items);
   const user = getUserFromCookies();
-  const [allItems, setAllItems] = useState<CartItem[]>(items);
 
-  useEffect(() => setAllItems(items), [items]);
-
+  /* ===================== FETCH CART ===================== */
   const fetchCartData = () => {
-    if (user) {
-      setIsLoading(true);
-      axiosAuthInstance()
-        .get("/api/cart/")
-        .then(res => dispatch(setCartData(res.data)))
-        .catch(err => console.error("Error fetching Cart Items", err))
-        .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
+    if (!user) return setIsLoading(false);
+
+    setIsLoading(true);
+    axiosAuthInstance()
+      .get("/api/cart/")
+      .then(res => dispatch(setCartData(res.data)))
+      .catch(err => console.error("Error fetching cart", err))
+      .finally(() => setIsLoading(false));
   };
 
-  useEffect(() => fetchCartData(), [isModalOpen]);
+  useEffect(() => {
+    fetchCartData();
+  }, []);
 
-  // ------------------------------
-  // Centralized update function
-  const updateQuantity = (product: CartItem, newQuantity: number) => {
-    const existingItem = allItems.find(item => item.productId === product.productId);
+  /* ===================== UPDATE QUANTITY ===================== */
+  const updateQuantity = async (item: CartItem, newQty: number) => {
+    if (!user) {
+      toast.info("Please log in to manage your cart.");
+      return;
+    }
 
-    // Update local state
-    let updatedItems;
-    if (newQuantity <= 0) {
-      updatedItems = allItems.filter(item => item.productId !== product.productId);
-      dispatch(deleteFromCart(product.productId));
-    } else {
-      updatedItems = allItems.map(item =>
-        item.productId === product.productId ? { ...item, quantities: newQuantity } : item
-      );
+    if (item.stock !== undefined && newQty > item.stock) {
+      toast.error(`Only ${item.stock} items available`);
+      return;
+    }
+
+    const existingItem = items.find(i => i.productId === item.productId);
+
+    /* ===== REMOVE ===== */
+    if (newQty <= 0) {
+      dispatch(deleteFromCart(item.productId));
+
+      try {
+        await axiosAuthInstance().delete("/api/cart/remove", {
+          params: { productId: item.productId },
+        });
+      } catch {
+        toast.error("Failed to remove item");
+      }
+      return;
+    }
+
+    /* ===== REDUX DIFF UPDATE ===== */
+    const diff = newQty - item.quantities;
+
+    if (diff > 0) {
       const productForCart: Product = {
-        productId: product.productId,
-        name: product.names,
+        productId: item.productId,
+        name: item.names,
         description: "",
-        price: product.prices,
-        discountedPrice: product.prices,
-        imageUrls: product.imageUrls || [],
-        rating: product.rating,
-        discountPercentage: product.discountPercentage,
-        discountPrice: product.discountPrice,
-        stock: product.stock,
-        quantities: product.quantities,
-        wishlistId: product.wishlistId || null
+        price: round2(item.prices),
+        discountedPrice: round2(item.prices),
+        discountPercentage: item.discountPercentage,
+        discountPrice: round2(item.discountPrice),
+        imageUrls: item.imageUrls || [],
+        rating: item.rating,
+        stock: item.stock,
+        quantities: diff,
+        wishlistId: null,
       };
       dispatch(addToCart(productForCart));
     }
-    setAllItems(updatedItems);
 
-    // Backend update
-    if (user && existingItem) {
-      axiosAuthInstance()
-        .post("/api/cart/update", { itemId: existingItem.itemId, quantity: newQuantity })
-        .catch(() => toast.error("Failed to update cart"));
+    if (diff < 0) {
+      dispatch(removeFromCart(item.productId));
+    }
+
+    /* ===== BACKEND ===== */
+    try {
+      if (existingItem?.itemId) {
+        await axiosAuthInstance().post("/api/cart/update", {
+          itemId: existingItem?.itemId,
+          quantity: newQty,
+        });
+      }
+    } catch {
+      toast.error("Failed to update cart");
     }
   };
 
-  const removeItem = (productId: string) => {
-    const existingItem = allItems.find(item => item.productId === productId);
-    if (!existingItem) return;
-
-    setAllItems(allItems.filter(item => item.productId !== productId));
+  /* ===================== REMOVE ITEM ===================== */
+  const removeItem = async (productId: string) => {
     dispatch(deleteFromCart(productId));
-
-    if (user) {
-      axiosAuthInstance().delete(`/api/cart/remove?productId=${productId}`).catch(console.error);
+    try {
+      await axiosAuthInstance().delete("/api/cart/remove", {
+        params: { productId },
+      });
+    } catch {
+      toast.error("Failed to remove item");
     }
   };
 
-  const clearCartItems = () => {
+  /* ===================== CLEAR CART ===================== */
+  const clearCartItems = async () => {
     dispatch(clearCart());
-    setIsModalOpen(false);
-    if (user) {
-      axiosAuthInstance().post("/api/cart/clear").catch(console.error);
+    try {
+      await axiosAuthInstance().post("/api/cart/clear");
+    } catch {
+      toast.error("Failed to clear cart");
     }
   };
 
-  const formatPrice = (price: number) => price.toFixed(2);
+  /* ===================== PRICE LOGIC ===================== */
+  const formatPrice = (price: number) => round2(price).toFixed(0);
 
-  const calculateDiscountedPrice = (item: CartItem) =>
-    item.prices - ((item.discountPercentage || 0) * item.prices) / 100;
+  const discountedPrice = (item: CartItem) =>
+    round2(item.prices - ((item.discountPercentage || 0) * item.prices) / 100);
 
-  const calculateSubtotal = (item: CartItem) =>
-    calculateDiscountedPrice(item) * item.quantities;
+  const subtotal = (item: CartItem) =>
+    round2(discountedPrice(item) * item.quantities);
 
-  const calculateTotal = () =>
-    items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
+  const total = () =>
+    round2(items.reduce((sum, item) => sum + subtotal(item), 0));
 
+  /* ===================== UI ===================== */
   return (
-    <div className="hover:cursor-pointer">
+    <div>
       <Sheet>
         {user ? (
           <SheetTrigger asChild>
-            <div className="relative" onClick={fetchCartData}>
-              <FaCartShopping className="size-6 hover:text-primaryBlue text-blue-600" />
+            <div className="relative cursor-pointer" onClick={fetchCartData}>
+              <FaCartShopping className="size-6 text-blue-600" />
               {items.length > 0 && (
-                <span className="absolute w-5 h-5 bg-white text-[#0037c8] border border-gray-400 rounded-full px-2 mt-1.5 text-xs -top-4 -right-3 flex items-center justify-center">
-                  {items.length > 10 ? "+9" : items.length}
+                <span className="absolute w-5 h-5 bg-white border rounded-full text-xs -top-3 -right-3 flex items-center justify-center">
+                  {items.length}
                 </span>
               )}
             </div>
           </SheetTrigger>
         ) : (
-          <button onClick={() => setIsLoginModalOpen(true)} type="button" className="relative">
-            <FaCartShopping className="size-6 hover:text-primaryBlue text-blue-600" />
+          <button onClick={() => setIsLoginModalOpen(true)}>
+            <FaCartShopping className="size-6 text-blue-600" />
           </button>
         )}
 
-        <SheetContent className="h-full overflow-y-scroll">
+        <SheetContent className="overflow-y-scroll">
           <SheetHeader>
-            <DialogTitle className="font-semibold text-xl flex justify-start">Your Shopping Cart</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              Your Shopping Cart 
+            </DialogTitle>
           </SheetHeader>
 
           <SheetDescription asChild>
             <div>
               {items.length === 0 ? (
-                <div className="text-center">
-                  <i className="fa-solid fa-shopping-cart text-4xl py-10"></i>
-                  <p className="text-lg">Your cart is empty</p>
-                  <Link className={cn(buttonVariants(), "mt-4 w-full")} href={"/homepage/products"}>
+                <div className="text-center py-10">
+                  <p>Your cart is empty</p>
+                  <Link
+                    href="/homepage/products"
+                    className={cn(buttonVariants(), "mt-4")}
+                  >
                     Continue Shopping
                   </Link>
                 </div>
               ) : (
                 <>
-                  <div className="w-full flex justify-end my-1">
-                    <Button variant="outline" onClick={clearCartItems} className="flex items-center gap-2 hover:text-destructive">
-                      <p>Clear Cart</p>
-                      <MdDelete className="size-5" />
+                  <div className="flex justify-end mb-2">
+                    <Button variant="outline" onClick={clearCartItems}>
+                      Clear Cart
                     </Button>
                   </div>
 
-                  <div className="flex flex-col gap-6 mt-3">
-                    <div className="flex-grow overflow-y-auto sm:h-[390px] h-[590px] scrollbar-thin border rounded-md">
-                      {isLoading ? (
-                        <LoadingContent className="h-40 w-full" />
-                      ) : (
-                        items.map((item, index) => (
-                          <div key={index} className="flex items-start sm:gap-4 gap-2 border-b border-gray-200 py-4 sm:px-2 px-1 hover:bg-gray-50 rounded-md transition-all">
-                            <Image
-                              src={
-                                item.imageUrls?.length
-                                  ? `${NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrls[0]}`
-                                  : "/placeholder-image.png"
+                  {isLoading ? (
+                    <LoadingContent />
+                  ) : (
+                    items.map(item => (
+                      <div
+                        key={item.productId}
+                        className="flex gap-3 border-b py-3"
+                      >
+                        <Image
+                          src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrls?.[0]}`}
+                          alt={item.names}
+                          width={80}
+                          height={80}
+                        />
+
+                        <div className="flex-grow">
+                          <p className="font-medium">{item.names}</p>
+                          <p>
+                            Rs.{formatPrice(discountedPrice(item))} ×{" "}
+                            {item.quantities}
+                          </p>
+
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                updateQuantity(item, item.quantities - 1)
                               }
-                              alt={item.names || "Product image"}
-                              width={100}
-                              height={100}
-                              style={{ objectFit: "contain" }}
-                              className="sm:h-20 h-16 sm:w-28 cursor-pointer"
-                              onClick={() => router.push(`/homepage/products/${item.productId}`)}
-                            />
+                            >
+                              <GrFormSubtract />
+                            </Button>
 
-                            <div className="flex flex-col flex-grow justify-between">
-                              <h3 className="sm:text-lg text-sm font-semibold text-gray-700 mb-1 line-clamp-2 text-wrap">{item.names}</h3>
+                            <span>{item.quantities}</span>
 
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-sm text-primaryBlue font-semibold">
-                                  Rs.{formatPrice(calculateDiscountedPrice(item))}
-                                </p>
-                                {item.discountPercentage > 0 && (
-                                  <p className="text-sm font-medium text-gray-500 line-through">
-                                    Rs.{formatPrice(item.prices)}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="flex flex-wrap items-center justify-between gap-3 mt-1">
-                                <div className="flex items-center">
-                                  <Button
-                                    variant="outline"
-                                    className="rounded-r-none border-r-0 text-xs sm:px-2 px-1 sm:w-8 sm:h-auto h-6"
-                                    onClick={() => updateQuantity(item, item.quantities - 1)}
-                                  >
-                                    <GrFormSubtract />
-                                  </Button>
-
-                                  <div className={cn(buttonVariants({ variant: "outline" }), "rounded-none text-xs text-center w-12 sm:px-2 px-1 sm:w-8 sm:h-auto h-6")}>
-                                    {item.quantities}
-                                  </div>
-
-                                  <Button
-                                    variant="outline"
-                                    className="rounded-l-none border-l-0 text-xs sm:px-2 px-1 sm:w-8 sm:h-auto h-6 text-black"
-                                    onClick={() => updateQuantity(item, item.quantities + 1)}
-                                    disabled={item.quantities >= (item.stock ?? 0)}
-                                  >
-                                    <IoAdd />
-                                  </Button>
-                                </div>
-
-                                <p className="text-sm text-gray-500">Subtotal: Rs.{formatPrice(calculateSubtotal(item))}</p>
-                              </div>
-
-                              <Button
-                                variant="outline"
-                                className="mt-3 px-2 py-1 w-fit text-red-500 border-red-300 hover:bg-red-50 flex items-center gap-2 text-sm"
-                                onClick={() => removeItem(item.productId)}
-                              >
-                                <MdDelete size={18} /> Remove
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="w-full">
-                      <div className="bg-gray-50 rounded-lg pt-2 sticky top-0">
-                        <div className="space-y-3 px-2">
-                          <div className="flex justify-between items-center text-gray-800">
-                            <p className="text-lg font-medium">Items ({items.length})</p>
-                            <p className="text-lg font-semibold">Rs.{formatPrice(calculateTotal())}</p>
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                updateQuantity(item, item.quantities + 1)
+                              }
+                            >
+                              <IoAdd />
+                            </Button>
                           </div>
 
-                          <div className="border-t pt-3 mt-3">
-                            <div className="flex justify-between items-center text-gray-800">
-                              <p className="text-lg font-medium">Total</p>
-                              <p className="text-lg font-medium">Rs.{formatPrice(calculateTotal())}</p>
-                            </div>
-                          </div>
-                        </div>
+                          <p className="mt-1 text-sm">
+                            Subtotal: Rs.{formatPrice(subtotal(item))}
+                          </p>
 
-                        <div className="mt-6">
-                          <Button onClick={() => { router.push("/checkout"); setIsModalOpen(false); }} className="w-full">
-                            Proceed to Checkout
+                          <Button
+                            variant="outline"
+                            className="mt-2 text-red-500"
+                            onClick={() => removeItem(item.productId)}
+                          >
+                            <MdDelete /> Remove
                           </Button>
                         </div>
                       </div>
+                    ))
+                  )}
+
+                  <div className="mt-4 border-t pt-3">
+                    <div className="flex justify-between text-lg font-semibold">
+                      <span>Total</span>
+                      <span>Rs.{formatPrice(total())}</span>
                     </div>
+
+                    <Button
+                      className="w-full mt-4"
+                      onClick={() => router.push("/checkout")}
+                    >
+                      Proceed to Checkout
+                    </Button>
                   </div>
                 </>
               )}
