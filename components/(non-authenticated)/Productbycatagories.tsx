@@ -94,16 +94,6 @@ const ProductbyCategories: React.FC = () => {
   const [sessionId, setSessionId] = useState<string>();
   const [sessionName, setSessionName] = useState<string>();
 
-  useEffect(() => {
-    const stored = sessionStorage.getItem("categorySession");
-    if (!stored) return;
-
-    const parsed: CategorySession = JSON.parse(stored);
-
-    setSessionId(parsed.categoryId);
-    setSessionName(parsed.categoryName);
-    setSelectedCategoryId(parsed.categoryId);
-  }, []);
   console.log("Id", sessionId, "Name", sessionName);
   useEffect(() => {
     const fetchUserDetails = async () => {

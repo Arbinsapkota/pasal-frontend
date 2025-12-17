@@ -14,6 +14,7 @@ import { Product } from "@/redux/slices/cartSlice";
 import { Checkbox } from "../ui/checkbox";
 import { MdOutlineMenuOpen } from "react-icons/md";
 import { RiMenuFold2Fill } from "react-icons/ri";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface SuperCategory {
   superCategoryId: string;
@@ -61,8 +62,7 @@ interface CategoryStates {
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const 
-ProductsSidebar = ({
+const ProductsSidebar = ({
   selectedSubCategory,
   setSelectedSubCategory,
   categories,
@@ -84,7 +84,8 @@ ProductsSidebar = ({
   const [allSubCategories, setAllSubCategories] = useState<Subcategory[]>([]);
   const [openedCategory, setOpenedCategory] = useState<string | undefined>();
   const [priceRange, setPriceRange] = useState<number[]>([0, 500000]); // 🔥 min price changed to 0
-
+  const searchParams = useSearchParams();
+  const categoryIdFromUrl = searchParams.get("categoryId");
   const toggleSubCategories = (categoryId: string) => {
     setOpenedCategory((prev) => (prev === categoryId ? undefined : categoryId));
   };
@@ -103,7 +104,24 @@ ProductsSidebar = ({
       return updatedSubCats;
     });
   };
-console.log("-----------",selectedCategoryId)
+  useEffect(() => {
+    if (categoryIdFromUrl) {
+      setSelectedCategoryId(categoryIdFromUrl);
+
+      const subs = allSubCategories.filter(
+        (s) => s.category.categoryId === categoryIdFromUrl
+      );
+      setSubCategories(subs);
+    } else {
+      setSelectedCategoryId(undefined);
+      setSubCategories(allSubCategories);
+    }
+
+    // Clear selected subcategories whenever category changes
+    setSelectedSubCategory([]);
+    setSelectedSubCategoryDetails([]);
+  }, [categoryIdFromUrl, allSubCategories]);
+  console.log("-----------", selectedCategoryId);
   const fetchProducts = useCallback(
     debounce(
       (
@@ -126,14 +144,14 @@ console.log("-----------",selectedCategoryId)
           .then((res) => {
             let filtered = res.data;
 
-            // ✅ FILTER BY CATEGORY
+            // Filter by category
             if (categoryId) {
               filtered = filtered.filter(
-                (product: any) => product.category?.category === categoryId
+                (product: any) => product.category === categoryId
               );
             }
 
-            // ✅ FILTER BY SUBCATEGORY
+            // Filter by subcategories
             if (subcategoryIds && subcategoryIds.length > 0) {
               filtered = filtered.filter((product: any) =>
                 subcategoryIds.includes(product.subcategory)
@@ -152,6 +170,15 @@ console.log("-----------",selectedCategoryId)
     ),
     []
   );
+
+  useEffect(() => {
+    fetchProducts(
+      priceRange[0],
+      priceRange[1],
+      selectedSubCategory.length > 0 ? selectedSubCategory : null,
+      categoryIdFromUrl || undefined
+    );
+  }, [priceRange, selectedSubCategory, categoryIdFromUrl]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -204,14 +231,12 @@ console.log("-----------",selectedCategoryId)
     );
     setSubCategories(subs);
   };
-
   useEffect(() => {
-    fetchProducts(
-      priceRange[0],
-      priceRange[1],
-      selectedSubCategory.length > 0 ? selectedSubCategory : null
-    );
-  }, [priceRange, selectedSubCategory]);
+    if (selectedCategoryId) {
+      setSelectedSubCategory([]);
+      setSelectedSubCategoryDetails([]);
+    }
+  }, [selectedCategoryId]);
 
   const handleChange = (_e: any, val: number | number[]) => {
     setPriceRange(val as number[]);

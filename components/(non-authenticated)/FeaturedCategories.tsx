@@ -64,17 +64,11 @@ const FeaturedCategories = () => {
   const firstSix = categories.slice(0, 6);
 
   // Redirect function
-  const handleCategoryClick = (category: Category) => {
-    sessionStorage.setItem(
-      "categorySession",
-      JSON.stringify({
-        categoryId: category.categoryId,
-        categoryName: category.name,
-      })
-    );
+const handleCategoryClick = (category: Category) => {
+  router.push(`/homepage/products?categoryId=${category.categoryId}`);
+};
 
-    router.push("/homepage/products");
-  };
+
   return (
     <section className="py-14">
       <div className="text-center mb-10">
