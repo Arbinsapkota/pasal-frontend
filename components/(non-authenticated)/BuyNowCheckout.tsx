@@ -827,9 +827,9 @@ const BuyNowCheckout: React.FC = () => {
                     <p>Quantity: {item.quantity}</p>
                     <p className="sm:text-sm text-xs text-gray-500 text-red-500">
                       Discount: Rs.
-                      {(item?.discountPercentage
+                      {((item?.discountPercentage
                         ? (item.price * item.discountPercentage) / 100
-                        : item.discountPrice) * item.quantity}
+                        : item.discountPrice) * item.quantity).toFixed(0)}
                     </p>
 
                     <p className="text-primaryBlue sm:text-lg text-sm font-semibold">
@@ -840,7 +840,7 @@ const BuyNowCheckout: React.FC = () => {
                             ? (item.price * item.discountPercentage) / 100
                             : 0)) *
                         item.quantity
-                      ).toFixed(2)}
+                      ).toFixed(0)}
                     </p>
                   </div>
                 </div>
@@ -848,7 +848,6 @@ const BuyNowCheckout: React.FC = () => {
             </div>
           )}
 
-          {/* mahendra */}
           <div>
             <div>
               <p className="text-primaryBlue font-semibold">Coupon Code</p>
@@ -878,10 +877,10 @@ const BuyNowCheckout: React.FC = () => {
                         : 0)),
                 0
               )
-              .toFixed(2)}
+              .toFixed(0)}
           </p>
           <p className="text-lg mt-1 font-semibold text-red-500">
-            Coupon Discount: Rs. {discountValue.toFixed(2)}
+            Coupon Discount: Rs. {discountValue.toFixed(0)}
           </p>
           {selectedDelivery && (
             <p className="text-green-600">
@@ -936,7 +935,7 @@ const BuyNowCheckout: React.FC = () => {
               ) -
               discountValue +
               deliveryCharge
-            ).toFixed(2)}
+            ).toFixed(0)}
           </p>
           <Button
             type="submit"

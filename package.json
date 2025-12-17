@@ -46,7 +46,7 @@
     "dompurify": "^3.2.6",
     "dotenv": "^16.4.5",
     "embla-carousel-react": "^8.5.2",
-    "framer-motion": "^11.13.5",
+    "framer-motion": "^11.18.2",
     "he": "^1.2.0",
     "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",

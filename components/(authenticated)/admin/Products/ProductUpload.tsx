@@ -286,7 +286,7 @@ const ProductUpload: React.FC = () => {
               <i className="fa-solid fa-upload"></i>
               <span>Upload Excel</span>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto max-w-[90%] sm:max-w-[60%] scrollbar-thin  text-black">
+            <DialogContent className="max-h-[90vh] overflow-y-auto max-w-full sm:max-w-[60%] scrollbar-thin  text-black">
               <DialogHeader className="flex flex-row items-center gap-4 ">
                 <DialogTitle>Upload Products via Excel</DialogTitle>
                 <a

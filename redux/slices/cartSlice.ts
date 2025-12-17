@@ -17,6 +17,8 @@ export interface Product {
   quantities: number;
   discountPrice?: number;
   variableNo?: string;
+  vendorId?: string;
+  categoryName?: string;
 }
 
 export interface CartItem {
@@ -31,6 +33,21 @@ export interface CartItem {
   stock?: number;
   totalPrice: number;
   imageUrls: string[] | null;
+  rating: number | null;
+  variableNo?: string;
+}
+export interface CartProduct {
+  discountPercentage: number;
+  discountPrice: number;
+  itemId?: string;
+  cartId?: string;
+  productId: string;
+  names: string;
+  quantities: number;
+  prices: number;
+  stock?: number;
+  totalPrice: number;
+  imageUrls: string | null;
   rating: number | null;
   variableNo?: string;
 }

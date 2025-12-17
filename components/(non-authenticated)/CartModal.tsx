@@ -226,7 +226,6 @@ const CartModal: React.FC = () => {
               discountedPrice: 0, // Add discounted price if applicable
               imageUrls: existingItem.imageUrls ?? null,
               rating: null, // Add rating if available
-              wishlistId: existingItem.wishlistId || null,
               cartId: existingItem.cartId,
             },
             existingItem.quantities - 1 // Updated quantity
@@ -324,7 +323,7 @@ const CartModal: React.FC = () => {
                             discountedPrice: item.prices,
                             imageUrls: item.imageUrls || [],
                             rating: null,
-                            wishlistId: item.wishlistId || null,
+                            wishlistId: null,
                           };
 
                           return (
@@ -353,7 +352,7 @@ const CartModal: React.FC = () => {
 
                               <div className="ml-4 flex flex-col  flex-grow">
                                 <p className="text-lg font-medium text-gray-700">
-                                  ${item?.prices?.toFixed(2)}
+                                  ${item?.prices?.toFixed()}
                                 </p>
                                 <div className="flex justify-between items-start">
                                   <h3 className=" font-medium">{item.names}</h3>

@@ -92,6 +92,9 @@ interface ExtendedProduct extends Product {
   status?: number;
   stock: number;
   productName?: string;
+  categoryName?: string;
+  labelImgUrl?: string;
+  subcategory?: string;
 }
 
 const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
@@ -167,6 +170,14 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
     );
   };
 
+  // Get cart items from Redux
+  const dispatch = useDispatch();
+  const items = useSelector((state: RootState) => state.cart.items);
+  const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
+  const user = getUserFromCookies();
+  const router = useRouter();
+
+  // Fetch product data
   useEffect(() => {
     axiosInstance()
       .get("/api/product/", {
@@ -227,6 +238,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
       });
   }, [productId]);
 
+  // Fetch related products
   useEffect(() => {
     if (product) {
       axiosInstance()
@@ -247,12 +259,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
     }
   }, [product]);
 
-  // Get quantity from cart
-  const dispatch = useDispatch();
-  const items = useSelector((state: RootState) => state.cart.items);
-  const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
-  const user = getUserFromCookies();
-
+  // Update quantity from cart items
   useEffect(() => {
     if (product) {
       const item = items.find((item) => item.productId === product.productId);
@@ -260,207 +267,97 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
     }
   }, [items, product]);
 
-  // Cart functionality
-  const [allItems, setAllItems] = useState<CartItem[]>(items);
-  const [cartData, setCartData] = useState<Product[]>([]);
-  const router = useRouter();
-
-  const fetchCartData = useCallback(() => {
-    if (user) {
-      axiosAuthInstance()
-        .get("/api/cart/")
-        .then((res) => {
-          setCartData(res.data);
-        })
-        .catch((err) => {
-          console.error("Error fetching Cart Items", err);
-        });
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchCartData();
-  }, []);
-
-  const countApi = useCallback(
-    useDebouncedCallback((product: any, quantity: number) => {
-      const existingItem = cartData.find(
-        (item) => item.productId === product.productId
-      );
-
-      if (existingItem && existingItem.itemId) {
-        axiosAuthInstance()
-          .post("/api/cart/update", {
-            itemId: existingItem.itemId,
-            quantity,
-          })
-          .then(() => {
-            // Refresh cart after update
-          })
-          .catch((err) => {
-            toast.error("Failed to update cart");
-            console.error(err);
-          });
-      }
-    }, 400),
-    [cartData]
-  );
-
-  const addToCartByApi = useCallback((product: any, quantity: number) => {
-    axiosAuthInstance()
-      .post("/api/cart/add", {
-        products: { productId: product.productId },
-        quantity,
-      })
-      .then(() => {
-        fetchCartData();
-      })
-      .catch((err) => {
-        toast.error("Failed to add to cart");
-        console.error(err);
-      });
-  }, []);
-
-  const increaseCount = (
+  // Simplified cart handler
+  const handleAddToCart = useCallback(async (
     product: ExtendedProduct,
-    shouldAddToCart: boolean = false,
-    variableNo?: string
+    action: 'add' | 'increment' | 'decrement'
   ) => {
-    const itemPrice = matchedVariants?.price || product.price;
-    const discountedPrice =
-      matchedVariants?.discountedPrice || product.discountedPrice || 0;
-    const finalPrice = itemPrice - discountedPrice;
-
-    const productToAdd = {
-      ...product,
-      price: finalPrice,
-      variableNo,
-    };
-
-    // Check if the product already exists in allItems
-    const existingItem = allItems.find(
-      (item) =>
-        item.productId === product.productId && item.variableNo === variableNo
-    );
-
-    let updatedItems;
-    if (existingItem) {
-      // If the product exists, increase quantity and update the total price
-      updatedItems = allItems.map((item) =>
-        item.productId === product.productId && item.variableNo === variableNo
-          ? {
-              ...item,
-              quantities: item.quantities + 1,
-              totalPrice: item.totalPrice + finalPrice,
-            }
-          : item
-      );
-    } else {
-      // If the product does not exist, add it to allItems
-      updatedItems = [
-        ...allItems,
-        {
-          discountPercentage: product.discountPercentage || 0,
-          discountPrice: discountedPrice,
-          productId: product.productId || "",
-          names: product.name || "",
-          quantities: 1,
-          prices: finalPrice,
-          totalPrice: finalPrice,
-          imageUrls: [
-            selectedImage ||
-              (Object.values(product.imageUrls || {})[0] as string) ||
-              "/product.png",
-          ],
-          rating: product.averageRating || product.rating,
-          variableNo,
-        },
-      ];
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return;
     }
 
-    // Update local state
-    setAllItems(updatedItems);
-    setQuantity(existingItem ? existingItem.quantities + 1 : 1);
+    // Find existing item in cart
+    const cartItem = items.find(item => item.productId === product.productId);
+    
+    // Calculate price
+    const itemPrice = product.price;
+    const discountAmount = product.discountedPrice || 0;
+    const finalPrice = itemPrice - discountAmount;
 
-    // Update Redux
-    dispatch(addToCart(productToAdd));
-
-    // Trigger API call if user is logged in
-    if (user) {
-      if (shouldAddToCart) {
-        addToCartByApi(productToAdd, 1);
-      } else {
-        countApi(productToAdd, existingItem ? existingItem.quantities + 1 : 1);
-      }
-    }
-  };
-
-  const decreaseCount = (
-    vendorId: string,
-    productId: string,
-    product?: ExtendedProduct,
-    shouldRemoveFromCart?: boolean,
-    variableNo?: string
-  ) => {
-    const existingItem = allItems.find(
-      (item) => item.productId === productId && item.variableNo === variableNo
-    );
-
-    if (existingItem) {
-      if (existingItem.quantities === 1) {
-        // Remove the item completely if quantity is 1
-        const updatedItems = allItems.filter(
-          (item) =>
-            !(item.productId === productId && item.variableNo === variableNo)
-        );
-        setAllItems(updatedItems);
-        setQuantity(0);
-        dispatch(removeFromCart(productId));
-
-        // Call API to completely remove item
-        if (user) {
-          axiosAuthInstance()
-            .delete(`/api/cart/remove?productId=${existingItem.productId}`)
-            .catch((err) => {
-              console.error("Failed to remove item from cart", err);
-            });
-        }
-      } else {
-        // Decrease quantity and update total price
-        const itemPrice = matchedVariants?.price || product?.price || 0;
-        const discountedPrice =
-          matchedVariants?.discountedPrice || product?.discountedPrice || 0;
-        const finalPrice = itemPrice - discountedPrice;
-
-        const updatedItems = allItems.map((item) =>
-          item.productId === productId && item.variableNo === variableNo
-            ? {
-                ...item,
-                quantities: item.quantities - 1,
-                totalPrice: item.totalPrice - finalPrice,
-              }
-            : item
-        );
-
-        setAllItems(updatedItems);
-        setQuantity(existingItem.quantities - 1);
-        dispatch(removeFromCart(productId));
-
-        // Update backend with new quantity
-        if (user && product) {
-          countApi(
-            {
-              ...product,
-              price: finalPrice,
-              variableNo,
-            },
-            existingItem.quantities - 1
+    try {
+      let newQuantity = 1;
+      
+      if (action === 'increment' && cartItem) {
+        newQuantity = cartItem.quantities + 1;
+        // Update via API
+        await axiosAuthInstance().post("/api/cart/update", {
+          itemId: cartItem.itemId,
+          quantity: newQuantity
+        });
+      } 
+      else if (action === 'decrement' && cartItem) {
+        newQuantity = cartItem.quantities - 1;
+        if (newQuantity === 0) {
+          // Remove item
+          await axiosAuthInstance().delete(
+            `/api/cart/remove?productId=${cartItem.productId}`
           );
+        } else {
+          // Update quantity
+          await axiosAuthInstance().post("/api/cart/update", {
+            itemId: cartItem.itemId,
+            quantity: newQuantity
+          });
         }
       }
-    }
-  };
+      else if (action === 'add') {
+        // Add new item
+        await axiosAuthInstance().post("/api/cart/add", {
+          products: { productId: product.productId },
+          quantity: 1
+        });
+        newQuantity = 1;
+      }
 
+      // Update Redux state
+      const productToUpdate = {
+        ...product,
+        itemId: cartItem?.itemId,
+        price: finalPrice,
+        discountedPrice: discountAmount,
+        discountPercentage: product.discountPercentage || 0,
+        name: product.productName || product.name || '',
+        imageUrls: product.productImages ? 
+          Object.values(product.productImages) : 
+          (product.imageUrls || [])
+      };
+
+      if (action === 'decrement' && newQuantity === 0) {
+        dispatch(removeFromCart(product.productId));
+      } else if (action === 'increment' || action === 'decrement') {
+        dispatch({
+          type: 'cart/setQuantity',
+          payload: { 
+            productId: product.productId, 
+            quantity: newQuantity 
+          }
+        });
+      } else {
+        dispatch(addToCart(productToUpdate));
+      }
+
+      if (action === 'add') {
+        toast.success("Added to cart!");
+      }
+
+    } catch (error) {
+      console.error("Cart operation failed:", error);
+      toast.error("Failed to update cart");
+    }
+  }, [user, items, dispatch, setIsLoginModalOpen]);
+
+  // Wishlist function
   const wishlistApi = useDebouncedCallback(
     (product: ExtendedProduct, action: "add" | "remove") => {
       const endpoint = action === "add" ? "/api/wishlist/" : "/api/wishlist/";
@@ -503,10 +400,9 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
       return;
     }
 
-    const itemPrice = matchedVariants?.price || product.price;
-    const discountedPrice =
-      matchedVariants?.discountedPrice || product.discountedPrice || 0;
-    const finalPrice = itemPrice - discountedPrice;
+    const itemPrice = product.price;
+    const discountAmount = product.discountedPrice || 0;
+    const finalPrice = itemPrice - discountAmount;
 
     // Prepare product details for checkout
     const checkoutItem = {
@@ -519,7 +415,6 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
         selectedImage ||
         (Object.values(product.imageUrls || {})[0] as string) ||
         "/product.png",
-      variableNo: matchedVariants?.variableNo,
     };
 
     // Navigate to checkout with product details
@@ -918,62 +813,46 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                 <div className="flex gap-4 flex-wrap">
                   {product?.stock > 0 ? (
                     quantity && quantity > 0 ? (
-                      <div
-                        className={`hover:bg-orange-500 bg-orange-500 grid grid-cols-3 items-center text-center rounded-full w-36`}
-                      >
+                      <div className="flex items-center border rounded-full overflow-hidden w-36">
                         <Button
-                          className="rounded-l-full text-xl hover:bg-orange-500 bg-orange-500 text-white"
-                          onClick={() =>
-                            decreaseCount(
-                              product?.vendorId || "",
-                              product?.productId,
-                              product,
-                              undefined,
-                              matchedVariants?.variableNo
-                            )
-                          }
+                          variant="ghost"
+                          className="rounded-none h-10 w-10 hover:bg-gray-100"
+                          onClick={() => handleAddToCart(product, 'decrement')}
+                          disabled={quantity <= 1}
                         >
                           <RiSubtractFill />
                         </Button>
-                        <p className="text-white dark:text-black font-medium px-2">
+                        <div className="flex-1 text-center font-medium">
                           {quantity}
-                        </p>
+                        </div>
                         <Button
-                          className="rounded-r-full text-xl hover:bg-orange-500 bg-orange-500 text-white"
-                          onClick={() => {
-                            increaseCount(
-                              product,
-                              false,
-                              matchedVariants?.variableNo
-                            );
-                          }}
-                          disabled={
-                            quantity >=
-                            (matchedVariants?.stock || product?.stock)
-                          }
+                          variant="ghost"
+                          className="rounded-none h-10 w-10 hover:bg-gray-100"
+                          onClick={() => handleAddToCart(product, 'increment')}
+                          disabled={quantity >= product.stock}
                         >
                           <IoMdAdd />
                         </Button>
                       </div>
                     ) : (
                       <Button
-                        className={`flex items-center gap-1 w-36 hover:bg-orange-500 bg-orange-500 `}
-                        onClick={() => {
-                          increaseCount(
-                            product,
-                            false,
-                            matchedVariants?.variableNo
-                          );
-                        }}
+                        className="flex items-center gap-1 w-36 bg-orange-500 hover:bg-orange-600 text-white"
+                        onClick={() => handleAddToCart(product, 'add')}
                       >
-                        <span className="text-xl">
-                          <IoMdAdd />
-                        </span>
+                        <IoMdAdd />
                         Add to Cart
                       </Button>
                     )
-                  ) : null}
+                  ) : (
+                    <Button
+                      disabled
+                      className="w-36 bg-gray-300 text-gray-500 cursor-not-allowed"
+                    >
+                      Out of Stock
+                    </Button>
+                  )}
 
+                  {/* Wishlist Button */}
                   <Button
                     variant="outline"
                     className="flex items-center gap-2 bg-orange-500/5 text-orange-bg-orange-500 hover:bg-orange-500/10 border-orange-bg-orange-500 dark:bg-orange-500/15"
@@ -981,20 +860,14 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                       if (user) {
                         toggleWishlist(
                           product,
-                          wishlistItems.find(
-                            (item) => item.productId == product.productId
-                          )
-                            ? true
-                            : false
+                          wishlistItems.some(item => item.productId == product.productId)
                         );
                       } else {
                         setIsLoginModalOpen(true);
                       }
                     }}
                   >
-                    {wishlistItems.find(
-                      (item) => item.productId == product.productId
-                    ) ? (
+                    {wishlistItems.some(item => item.productId == product.productId) ? (
                       <>
                         <FaHeart
                           size={16}
@@ -1265,11 +1138,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                               className="h-6 w-6 p-0"
                               onClick={(e) => {
                                 e.preventDefault();
-                                decreaseCount(
-                                  relatedProduct.vendorId || "",
-                                  relatedProduct.productId,
-                                  relatedProduct as ExtendedProduct
-                                );
+                                handleAddToCart(relatedProduct as ExtendedProduct, 'decrement');
                               }}
                             >
                               <BsDash className="text-xs" />
@@ -1283,10 +1152,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                               className="h-6 w-6 p-0"
                               onClick={(e) => {
                                 e.preventDefault();
-                                increaseCount(
-                                  relatedProduct as ExtendedProduct,
-                                  false
-                                );
+                                handleAddToCart(relatedProduct as ExtendedProduct, 'increment');
                               }}
                             >
                               <IoMdAdd className="text-xs" />
@@ -1300,10 +1166,7 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                             onClick={(e) => {
                               e.preventDefault();
                               user
-                                ? increaseCount(
-                                    relatedProduct as ExtendedProduct,
-                                    true
-                                  )
+                                ? handleAddToCart(relatedProduct as ExtendedProduct, 'add')
                                 : setIsLoginModalOpen(true);
                             }}
                           >

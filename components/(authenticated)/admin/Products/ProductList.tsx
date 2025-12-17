@@ -199,7 +199,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
       </div>
 
       {/* Products Table */}
-      <div className="overflow-x-scroll max-w-[850px]  p-4 h-full border rounded-lg mt-2">
+      <div className="overflow-x-scroll max-w-full  p-4 h-full border rounded-lg mt-2">
         <table className="min-w-full bg-white border border-gray-300 shadow-md rounded-lg">
           <thead>
             <tr className="text-center bg-gray-100">

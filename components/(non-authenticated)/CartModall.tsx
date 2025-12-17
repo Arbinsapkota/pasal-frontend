@@ -222,7 +222,7 @@ const CartModal: React.FC = () => {
                         className="flex gap-3 border-b py-3"
                       >
                         <Image
-                          src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrls?.[0]}`}
+                          src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${item.imageUrls || '/product.png'}`}
                           alt={item.names}
                           width={80}
                           height={80}
