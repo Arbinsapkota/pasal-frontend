@@ -111,7 +111,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
   };
 
   const filteredProducts = products.filter(
-    product =>
+    (product) =>
       product?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product?.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -176,7 +176,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
 
         <div className="w-64">
           <Select
-            onValueChange={value => {
+            onValueChange={(value) => {
               setSearchByCategory(value);
             }}
           >
@@ -185,7 +185,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
             </SelectTrigger>
             <SelectContent className="border-gray-400 border rounded-md bg-white w-64 h-64  overflow-y-scroll z-20">
               <SelectItem value={"1"}>All Products</SelectItem>
-              {categories.map(category => (
+              {categories.map((category) => (
                 <SelectItem
                   key={category.categoryId}
                   value={category.categoryId}
@@ -236,7 +236,10 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
 
                     <td className="py-3 px-4 text-center ">
                       <Image
-                        src={`${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product?.imageUrls[0]}` || "/placeholder.png"}
+                        src={
+                          `${process.env.NEXT_PUBLIC_CLOUDINARY_URL}${product?.imageUrls[0]}` ||
+                          "/placeholder.png"
+                        }
                         alt={product?.name}
                         width={200}
                         height={200}
@@ -292,7 +295,7 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
 
                       <Dialog
                         open={product.productId == activeProductId}
-                        onOpenChange={isOpen =>
+                        onOpenChange={(isOpen) =>
                           setActiveProductId(isOpen ? product.productId : null)
                         }
                       >
@@ -351,10 +354,15 @@ const ProductList = ({ isAdded }: { isAdded?: boolean }) => {
       </div>
 
       {selectedProduct && isViewing && (
-        <ProductDetails
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
+        <Dialog open={true} onOpenChange={() => setSelectedProduct(null)}>
+          <DialogContent className="max-w-3xl p-0 px-0">
+            <DialogTitle></DialogTitle>
+            <ProductDetails
+              product={selectedProduct}
+              onClose={() => setSelectedProduct(null)}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* {selectedProduct && !isViewing && (

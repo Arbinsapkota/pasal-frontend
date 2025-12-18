@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Container from "@/components/(authenticated)/admin/maxWidthWrapper";
 import {
   Table,
@@ -67,35 +67,25 @@ interface Filters {
 }
 
 const CustomerList = () => {
-  const [sorting, setSorting] = useState([]);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPageNo, setTotalPageNo] = useState<number>(1);
-  const [isNextPageAvailable, setIsNextPageAvailable] =
-    useState<boolean>(false);
+  const [isNextPageAvailable, setIsNextPageAvailable] = useState<boolean>(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [pagination, setPagination] = useState<Filters>({
-    offset: 0,
-    size: 10,
-  });
+  const [pagination, setPagination] = useState<Filters>({ offset: 0, size: 10 });
   const [isUpdated, setIsUpdated] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const user = getUserFromCookies();
 
-  // Fetch customers based on pagination and isUpdated
+  // Fetch customers
   useEffect(() => {
-    if (searchQuery.length > 0) return; // Skip if searching
+    if (searchQuery.length > 0) return;
     setLoading(true);
 
     axiosAuthInstance()
-      .get("/api/auth/users", {
-        params: {
-          offset: pagination.offset,
-          size: pagination.size + 1,
-        },
-      })
+      .get("/api/auth/users", { params: { offset: pagination.offset, size: pagination.size + 1 } })
       .then(response => {
         const fetchedData = response.data;
         setIsNextPageAvailable(fetchedData?.length > pagination.size);
@@ -105,104 +95,70 @@ const CustomerList = () => {
       .catch(err => {
         setLoading(false);
         console.error("Error Fetching Users", err);
-        // toast.error("Failed to fetch users.");
       });
 
     axiosAuthInstance()
       .get("/api/auth/total-customers")
       .then(res => {
         const totalCustomers = res.data || 0;
-        setTotalPageNo(
-          Math.max(1, Math.ceil(totalCustomers / pagination.size))
-        );
+        setTotalPageNo(Math.max(1, Math.ceil(totalCustomers / pagination.size)));
       })
-      .catch(err => {
-        console.error("Error fetching total customers", err);
-        // toast.error("Failed to fetch total customers.");
-      });
-  }, [pagination.offset, pagination.size, isUpdated]); // Add pagination dependencies
+      .catch(err => console.error("Error fetching total customers", err));
+  }, [pagination.offset, pagination.size, isUpdated]);
 
-  // Debounced search API
   const searchApi = useDebouncedCallback(() => {
     if (searchQuery.length === 0) {
-      setIsUpdated(prev => !prev); // Trigger regular fetch if search is cleared
+      setIsUpdated(prev => !prev);
       return;
     }
     setLoading(true);
     axiosAuthInstance()
-      .get("/api/auth/users/search", {
-        params: {
-          searchValue: searchQuery,
-        },
-      })
+      .get("/api/auth/users/search", { params: { searchValue: searchQuery } })
       .then(res => {
         setData(res.data);
-        setIsNextPageAvailable(false); // No pagination for search results
+        setIsNextPageAvailable(false);
         setLoading(false);
       })
       .catch(err => {
         console.error("Error fetching search results", err);
         setLoading(false);
-        // toast.error("Failed to fetch search results.");
       });
   }, 200);
 
-  useEffect(() => {
-    searchApi();
-  }, [searchQuery, searchApi]);
+  useEffect(() => { searchApi(); }, [searchQuery, searchApi]);
+  useEffect(() => { setCurrentPage(Math.floor(pagination.offset / pagination.size) + 1); }, [pagination.offset, pagination.size]);
 
-  // Update currentPage when pagination.offset changes
-  useEffect(() => {
-    setCurrentPage(Math.floor(pagination.offset / pagination.size) + 1);
-  }, [pagination.offset, pagination.size]);
-
-  // Table Columns
   const columns: ColumnDef<User>[] = [
-    {
-      accessorKey: "name",
-      header: "No.",
-      cell: ({ row }) => (
-        <p>{(currentPage - 1) * pagination.size + row.index + 1}</p>
-      ),
-    },
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => (
-        <p className="truncate">
-          {row?.original?.firstName + " " + row?.original?.lastName}
-        </p>
-      ),
-    },
+    { accessorKey: "name", header: "No.", cell: ({ row }) => <p>{(currentPage - 1) * pagination.size + row.index + 1}</p> },
+    { accessorKey: "name", header: "Name", cell: ({ row }) => <p className="truncate font-semibold text-gray-800 dark:text-gray-100">{row?.original?.firstName} {row?.original?.lastName}</p> },
     {
       accessorKey: "userType",
       header: "User Type",
-      cell: ({ row }) => <p>{row?.original?.userType}</p>,
+      cell: ({ row }) => (
+        <span className={cn(
+          "px-3 py-1 rounded-full text-xs font-semibold transition-transform duration-200",
+          row?.original?.userType === "ADMIN" ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md" :
+          row?.original?.userType === "SUB_ADMIN" ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-md" :
+          "bg-gray-200 text-gray-800"
+        )}>
+          {row?.original?.userType}
+        </span>
+      ),
     },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
+    { accessorKey: "email", header: "Email", cell: ({ row }) => <p className="text-gray-700 dark:text-gray-300">{row?.original?.email}</p> },
     {
       accessorKey: "userId",
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           {user.role === "SUPER_ADMIN" && (
-            <Dialog
-              open={activeModal === row?.original?.userId}
-              onOpenChange={value => {
-                setActiveModal(value ? row?.original?.userId : null);
-              }}
-            >
-              <DialogTrigger
-                className={cn(buttonVariants({ variant: "outline" }))}
-              >
+            <Dialog open={activeModal === row?.original?.userId} onOpenChange={value => setActiveModal(value ? row?.original?.userId : null)}>
+              <DialogTrigger className={cn(buttonVariants({ variant: "outline" }), "hover:scale-105 transition-transform")}>
                 <LiaEyeSolid className="text-xl sm:text-2xl" />
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg rounded-xl shadow-2xl p-5 bg-white dark:bg-gray-900">
                 <DialogHeader>
-                  <DialogTitle>Customer Details</DialogTitle>
+                  <DialogTitle className="text-lg font-bold text-gray-800 dark:text-gray-100">Customer Details</DialogTitle>
                 </DialogHeader>
                 <Modal row={row} />
               </DialogContent>
@@ -217,64 +173,27 @@ const CustomerList = () => {
     const [role, setRole] = useState<string>(row?.original?.userType);
     const submitRole = (value: string) => {
       axiosAuthInstance()
-        .post("/api/auth/update-role", {
-          userId: row?.original?.userId,
-          userType: value,
-        })
+        .post("/api/auth/update-role", { userId: row?.original?.userId, userType: value })
         .then(() => {
-          toast.success(
-            `${
-              row?.original?.firstName + " " + row?.original?.lastName
-            } is now ${value}`
-          );
+          toast.success(`${row?.original?.firstName} ${row?.original?.lastName} is now ${value}`);
           setIsUpdated(prev => !prev);
         })
-        .catch(err => {
-          console.error("Error changing role", err);
-          toast.error("Failed to change role.");
-        });
+        .catch(() => toast.error("Failed to change role."));
     };
-
     return (
-      <div className="flex flex-col gap-2">
-        <p className="font-semibold">Details:</p>
-        <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            <strong className="font-medium text-gray-800 dark:text-gray-200">
-              Name:
-            </strong>{" "}
-            {row?.original?.firstName + " " + row?.original?.lastName}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            <strong className="font-medium text-gray-800 dark:text-gray-200">
-              Contact:
-            </strong>{" "}
-            {row?.original?.contact || "-"}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            <strong className="font-medium text-gray-800 dark:text-gray-200">
-              Email:
-            </strong>{" "}
-            {row?.original?.email || "-"}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            <strong className="font-medium text-gray-800 dark:text-gray-200">
-              Address:
-            </strong>{" "}
-            {row?.original?.address || "-"}
-          </p>
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">Details:</p>
+        <div className="p-4 border rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-inner">
+          <p className="text-sm"><strong>Name:</strong> {row?.original?.firstName} {row?.original?.lastName}</p>
+          <p className="text-sm"><strong>Contact:</strong> {row?.original?.contact || "-"}</p>
+          <p className="text-sm"><strong>Email:</strong> {row?.original?.email || "-"}</p>
+          <p className="text-sm"><strong>Address:</strong> {row?.original?.address || "-"}</p>
         </div>
         {(role === "USER" || role === "SUB_ADMIN") && (
-          <div className="flex flex-col gap-2 mt-1">
-            <p className="font-semibold">Change Role:</p>
-            <Select
-              value={role}
-              onValueChange={value => {
-                setRole(value);
-                submitRole(value);
-              }}
-            >
-              <SelectTrigger className="w-[180px]">
+          <div className="flex flex-col gap-2 mt-2">
+            <p className="text-sm font-semibold">Change Role:</p>
+            <Select value={role} onValueChange={v => { setRole(v); submitRole(v); }}>
+              <SelectTrigger className="w-[180px] border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm hover:shadow-md transition">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
               <SelectContent>
@@ -300,122 +219,70 @@ const CustomerList = () => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const handlePreviousPage = () => {
-    setPagination(prev => ({
-      ...prev,
-      offset: Math.max(0, prev.offset - prev.size),
-    }));
-  };
-
-  const handleNextPage = () => {
-    setPagination(prev => ({
-      ...prev,
-      offset: prev.offset + prev.size,
-    }));
-  };
+  const handlePreviousPage = () => setPagination(prev => ({ ...prev, offset: Math.max(0, prev.offset - prev.size) }));
+  const handleNextPage = () => setPagination(prev => ({ ...prev, offset: prev.offset + prev.size }));
 
   return (
     <Container className="w-full px-0 md:px-0 mx-0">
       <AdminList isUpdated={isUpdated} setIsUpdated={setIsUpdated} />
-      <div className="flex flex-col gap-6 py-5">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
-          <h1 className="text-xl sm:text-2xl font-semibold">Customer List</h1>
-        </div>
-        <Card className="p-4">
-          <div className="pb-4 flex flex-wrap lg:flex-nowrap w-full gap-2 md:gap-5 justify-between items-center">
-            <div className="flex flex-col items-start gap-2 md:gap-5 w-full md:flex-row md:items-center lg:flex-row lg:items-center">
-              <div className="flex w-full gap-2 px-2 md:px-3 items-center border rounded-md focus-within:ring-ring focus-within:ring-2">
-                <Input
-                  placeholder="Search Name"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full border-none outline-none focus-visible:ring-0 focus:ring-blue-500 text-xs sm:text-base"
-                />
-                <CiSearch className="size-6" />
-              </div>
-            </div>
+      <div className="flex flex-col gap-6 py-5 relative">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5 justify-between sticky top-0 bg-white dark:bg-gray-900 z-20 shadow-md rounded-xl p-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">Customer List</h1>
+          <div className="flex w-full md:w-auto gap-2 items-center border rounded-lg shadow-sm px-3 py-1 bg-white dark:bg-gray-800">
+            <Input
+              placeholder="Search Name"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full border-none outline-none text-sm sm:text-base bg-transparent dark:text-gray-200"
+            />
+            <CiSearch className="text-lg text-gray-400 dark:text-gray-300" />
           </div>
-          <div>
-            <Table>
-              <TableHeader>
+        </div>
+
+        <Card className="p-4 bg-gradient-to-tr from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 shadow-xl rounded-2xl mt-4">
+          <div className="overflow-x-auto rounded-2xl">
+            <Table className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg">
+              <TableHeader className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm">
                 {table.getHeaderGroups().map((headerGroup, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={index} className="bg-gray-50 dark:bg-gray-800">
                     {headerGroup.headers.map((header, i) => (
-                      <TableHead
-                        key={i}
-                        className="font-medium text-gray-600 truncate"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                      <TableHead key={i} className="font-semibold text-gray-600 dark:text-gray-300 truncate">
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     ))}
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="font-medium">
+              <TableBody>
                 {loading ? (
-                  <>
-                    {Array.from({ length: 4 }).map((_, index) => (
-                      <TableRow key={index}>
-                        <TableCell colSpan={10} className="h-12 w-full">
-                          <LoadingContent />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </>
+                  Array.from({ length: 4 }).map((_, index) => (
+                    <TableRow key={index}><TableCell colSpan={10}><LoadingContent /></TableCell></TableRow>
+                  ))
                 ) : data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-4">
-                      No customers found.
-                    </TableCell>
+                    <TableCell colSpan={10} className="text-center py-4 text-gray-500 dark:text-gray-400">No customers found.</TableCell>
                   </TableRow>
                 ) : (
                   table.getRowModel().rows.map((row, index) => (
-                    <TableRow key={index}>
-                      {row.getVisibleCells().map((cell, i) => (
-                        <TableCell key={i}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
+                    <TableRow key={index} className="hover:bg-gradient-to-r hover:from-indigo-50 hover:via-purple-50 hover:to-pink-50 dark:hover:bg-gray-800 transition-all rounded-lg">
+                      {row.getVisibleCells().map((cell, i) => <TableCell key={i}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
           </div>
+
           <div className="flex flex-wrap items-center gap-10 justify-between pt-6 pb-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePreviousPage}
-                disabled={
-                  pagination.offset === 0 || loading || searchQuery.length > 0
-                }
-                className="text-sm sm:text-base"
-              >
+            <div className="flex gap-2">
+              <Button variant="default" size="sm" onClick={handlePreviousPage} disabled={pagination.offset === 0 || loading || searchQuery.length > 0} className="text-sm sm:text-base">
                 <FaChevronLeft />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={
-                  !isNextPageAvailable || loading || searchQuery.length > 0
-                }
-                className="text-sm sm:text-base"
-              >
+              <Button variant="default" size="sm" onClick={handleNextPage} disabled={!isNextPageAvailable || loading || searchQuery.length > 0} className="text-sm sm:text-base">
                 <FaChevronRight />
               </Button>
             </div>
-            <div className="text-xs sm:text-sm font-medium text-gray-600">
+            <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
               Showing {data.length} of {pagination.size} entries
             </div>
           </div>

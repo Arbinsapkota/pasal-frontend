@@ -22,29 +22,22 @@ const InfoCards: React.FC = () => {
           },
         };
 
-        const productResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/product/total`,
-          config
-        );
-        setTotalProduct(productResponse.data);
+        try {
+          const dashboardResponse = await axios.get(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/dashboard/`,
+            config
+          );
 
-        const customerResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/total-customers`,
-          config
-        );
-        setTotalCustomers(customerResponse.data);
+          const { totalProducts, totalCustomers, totalSales, totalEarnings } =
+            dashboardResponse.data;
 
-        const salesResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/order/sales`,
-          config
-        );
-        setTotalSales(salesResponse.data);
-
-        const earningsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/order/earnings`,
-          config
-        );
-        setTotalEarnings(earningsResponse.data);
+          setTotalProduct(totalProducts);
+          setTotalCustomers(totalCustomers);
+          setTotalSales(totalSales);
+          setTotalEarnings(totalEarnings);
+        } catch (error) {
+          console.error("Error fetching dashboard data:", error);
+        }
       } catch (err) {
         console.error("Error fetching data:", err);
       }

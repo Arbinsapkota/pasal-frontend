@@ -1,7 +1,9 @@
 import TextEditorReadOnly from "@/components/(non-authenticated)/textEditor/TextEditorReadOnly";
+import { NEXT_PUBLIC_CLOUDINARY_URL } from "@/components/env";
 import { Product } from "@/redux/slices/cartSlice";
 import Image from "next/image";
-import React from "react";
+import React, { useRef, useState } from "react";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 interface ProductDetailsProps {
   product: Product;
@@ -12,75 +14,133 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({
   product,
   onClose,
 }) => {
-
   const cleaned = product?.description?.replace(/^,/, "");
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const scrollLeft = () => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: -300, behavior: "smooth" });
+    }
+  };
+
+  const scrollRight = () => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: 300, behavior: "smooth" });
+    }
+  };
+
+  const originalPrice = product.price || 0;
+  const discountPercent = product.discountPercentage || 0;
+  const discountedPrice =
+    discountPercent > 0
+      ? originalPrice - (originalPrice * discountPercent) / 100
+      : originalPrice;
+
+  const [loadedImages, setLoadedImages] = useState<boolean[]>(
+    Array(product.imageUrls.length).fill(false)
+  );
+
+  const handleImageLoad = (index: number) => {
+    const newLoaded = [...loadedImages];
+    newLoaded[index] = true;
+    setLoadedImages(newLoaded);
+  };
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 text-black  ">
-      <div
-        className="fixed inset-0 bg-black opacity-50 "
-        onClick={onClose}
-      ></div>
-      <div className="relative bg-white max-w-2xl max-h-screen overflow-y-scroll p-6 border border-gray-200 rounded-2xl mx-auto shadow-xl z-50  w-full flex justify-between transition-all duration-300 ">
+    <div className="max-w-2xl mx-auto py-6 bg-white rounded-lg  space-y-6">
+      {/* Title */}
+      <h2 className="text-3xl font-extrabold text-gray-900 mb-6 border-b border-gray-200 pb-2">
+        Product Details
+      </h2>
+
+      {/* Image Carousel */}
+      <div className="relative flex items-center">
         <button
-          className="absolute top-3 right-3 text-gray-600 hover:text-red-500 text-2xl font-bold"
-          onClick={onClose}
+          onClick={scrollLeft}
+          className="absolute left-0 z-10 p-2 bg-white rounded-full shadow-lg hover:shadow-xl transition-transform transform hover:scale-110"
         >
-          &times;
+          <FaChevronLeft className="text-gray-600 text-xl" />
         </button>
 
-        <div>
-          <p className="text-2xl font-semibold text-gray-800 mb-3 text-wrap underline">
-            Product Details
-          </p>
-          <div className="flex gap-3 mb-4 overflow-x-auto mt-6">
-            {product.imageUrls.map((url, index) => (
+        <div
+          ref={carouselRef}
+          className="flex gap-6 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 py-2"
+        >
+          {product.imageUrls.map((url, index) => (
+            <div
+              key={index}
+              className="flex-shrink-0 w-60 h-60 rounded-3xl overflow-hidden border border-gray-200 bg-gradient-to-tr from-gray-100 via-white to-gray-50 relative"
+            >
               <Image
-                key={index}
-                src={url}
+                src={`${NEXT_PUBLIC_CLOUDINARY_URL}${url}`}
                 height={500}
                 width={500}
                 alt={product.name}
-                className="w-52 h-52 object-contain rounded-lg border border-gray-200"
+                placeholder="blur"
+                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWRlZWRlIi8+"
+                className={`
+          w-full h-full object-contain rounded-3xl
+          transition-opacity duration-500 ease-in-out
+          ${loadedImages[index] ? "opacity-100" : "opacity-0"}
+        `}
+                onLoadingComplete={() => handleImageLoad(index)}
               />
-            ))}
-          </div>
-
-          <h1 className="text-xl font-semibold text-gray-800 mb-3 text-wrap">
-            {product.name}
-          </h1>
-
-          <p
-            className={`text-base font-medium mb-2 ${
-              product?.stock && product?.stock > 0
-                ? "text-green-600"
-                : "text-red-600"
-            }`}
-          >
-            Stock: {product.stock}
-          </p>
-
-          <p className="text-lg font-semibold text-gray-800 mb-2">
-            Price: <span className="text-black">Rs.{product.price}</span>
-          </p>
-
-          <p className="text-lg font-semibold text-red-600 mb-4 ">
-            Discount Price: Rs.{product.discountedPrice}
-          </p>
-
-          <div className="sm:pb-8 pb-2">
-            <p className="text-sm underline text-gray-600 font-semibold pb-1">Description:</p>
-            {product?.description?.includes(",[{") ? (
-              <TextEditorReadOnly value={cleaned} />
-            ) : (
-              <p className="text-gray-600 mb-4">{product.description}</p>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
 
-        {/* Optional Rating */}
-        {/* <p className="text-yellow-500 text-sm">
-    Rating: {product.rating ? product.rating : "No rating available"}
-  </p> */}
+        <button
+          onClick={scrollRight}
+          className="absolute right-0 z-10 p-2 bg-white rounded-full shadow-lg hover:shadow-xl transition-transform transform hover:scale-110"
+        >
+          <FaChevronRight className="text-gray-600 text-xl" />
+        </button>
+      </div>
+
+      {/* Product Info */}
+      <div className="space-y-4">
+        <h3 className="text-2xl font-semibold text-gray-900">{product.name}</h3>
+
+        <p
+          className={`text-lg font-medium ${
+            product?.stock && product?.stock > 0
+              ? "text-green-600"
+              : "text-red-600"
+          }`}
+        >
+          {product?.stock && product?.stock > 0
+            ? `In Stock: ${product.stock}`
+            : "Out of Stock"}
+        </p>
+
+        <div className="flex items-center gap-4">
+          {discountPercent > 0 && (
+            <p className="text-lg font-medium text-gray-400 line-through transition-transform transform hover:scale-105">
+              Rs.{originalPrice.toFixed(2)}
+            </p>
+          )}
+          <p className="text-2xl font-bold text-red-600 transition-transform transform hover:scale-105">
+            Rs.{discountedPrice.toFixed(2)}
+          </p>
+          {discountPercent > 0 && (
+            <span className="text-sm font-semibold text-white bg-red-500 rounded-full px-3 py-1 shadow-md animate-pulse">
+              {discountPercent}% OFF
+            </span>
+          )}
+        </div>
+
+        <div className="pt-4 border-t border-gray-200">
+          <p className="text-sm font-semibold text-gray-600 mb-2">
+            Description:
+          </p>
+          {product?.description?.includes(",[{") ? (
+            <TextEditorReadOnly value={cleaned} />
+          ) : (
+            <p className="text-gray-700 leading-relaxed">
+              {product.description}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

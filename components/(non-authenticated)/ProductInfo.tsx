@@ -573,15 +573,11 @@ const ProductDetails: React.FC<ModalProps> = ({ productId }) => {
                         className="fill-yellow-500 text-yellow-500"
                       />
                       <span className="font-semibold text-sm text-black dark:text-yellow-100">
-                        {product?.averageRating
-                          ? product.averageRating.toFixed(1)
-                          : "0.0"}
-                        /5
+                        {product.rating}
                       </span>
                     </div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {product?.ratingUserCount ?? 0} rating
-                      {product?.ratingUserCount === 1 ? "" : "s"}
+                      {product?.ratingUserCount || 0} Ratings
                     </span>
                   </div>
 
