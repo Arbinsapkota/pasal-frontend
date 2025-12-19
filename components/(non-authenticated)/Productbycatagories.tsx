@@ -73,6 +73,10 @@ interface Subcategory {
   createdAt: string | null;
   updatedAt: string | null;
 }
+interface CategorySession {
+  categoryId: string;
+  categoryName: string;
+}
 
 const ProductbyCategories: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -87,7 +91,10 @@ const ProductbyCategories: React.FC = () => {
   const items = useSelector((state: RootState) => state.cart.items);
   const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
   const [user, setUser] = useState<any>();
+  const [sessionId, setSessionId] = useState<string>();
+  const [sessionName, setSessionName] = useState<string>();
 
+  console.log("Id", sessionId, "Name", sessionName);
   useEffect(() => {
     const fetchUserDetails = async () => {
       const userDetails = await getUserFromCookies();

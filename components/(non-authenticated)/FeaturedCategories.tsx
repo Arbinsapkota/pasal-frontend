@@ -10,7 +10,7 @@ import { NEXT_PUBLIC_CLOUDINARY_URL } from "@/components/env";
 import { useRouter } from "next/navigation";
 
 type Category = {
-  id?: string | number;
+  categoryId?: string | number;
   name: string;
   categoryImageUrl?: string;
 };
@@ -64,10 +64,10 @@ const FeaturedCategories = () => {
   const firstSix = categories.slice(0, 6);
 
   // Redirect function
-  const handleCategoryClick = (category: Category) => {
-    // Example route: /category/[id] or /category/[name]
-    router.push(`/category/${category.id || category.name}`);
-  };
+const handleCategoryClick = (category: Category) => {
+  router.push(`/homepage/products?categoryId=${category.categoryId}`);
+};
+
 
   return (
     <section className="py-14">
@@ -81,9 +81,11 @@ const FeaturedCategories = () => {
       <div className="mt-8">
         {categories.length > 6 ? (
           <Slider {...carouselSettings}>
-            {categories.map((cat, index) => (
+            {categories.map((cat, index) => {
+                  console.log("---------------------------",cat.categoryId)
+            return(
               <div
-                key={cat.id || index}
+                key={cat.categoryId || index}
                 className="px-3 cursor-pointer"
                 onClick={() => handleCategoryClick(cat)}
               >
@@ -105,13 +107,13 @@ const FeaturedCategories = () => {
                   </p>
                 </div>
               </div>
-            ))}
+            )})}
           </Slider>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6">
             {firstSix.map((cat, index) => (
               <div
-                key={cat.id || index}
+                key={cat.categoryId || index}
                 className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all hover:-translate-y-1 cursor-pointer"
                 onClick={() => handleCategoryClick(cat)}
               >
